@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+
+<launch>
+  <arg name="ns" default="limu_tof_ros"/>
+  <arg name="nn" default="camera"/>
+  <arg name="respawn" default="false"/>  
+
+  <arg name="lens_type" default="1"/>
+  <arg name="frequence_modulation" default="2"/>
+  <arg name="channel" default="0"/>
+
+  <arg name="image_type" default="1"/>
+  <arg name="hdr_mode"  default="2"/>
+  <arg name="int0"  default="50"/>
+  <arg name="int1"  default="600"/>
+  <arg name="int2"  default="4000"/>
+  <arg name="min_amplitude" default="60"/>
+  <arg name="int_gray" default="10000"/>
+  <arg name="rgb_camera" default="/dev/v4l/by-id/usb-046d_Logitech_Webcam_C930e_986A01BE-video-index0"/>
+  <arg name="imu_port" default="/dev/ttyUSB0"/>
+
+  <group ns="$(arg ns)">
+    <node pkg="limu_tof_ros"
+          type="limu_camera_node"
+          name="$(arg nn)"
+          output="screen"
+          respawn="$(arg respawn)">
+
+      <param name="lens_type" value="$(arg lens_type)"/>
+      <param name="frequence_modulation" value="$(arg frequence_modulation)"/>
+      <param name="channel" value="$(arg channel)"/>      
+      <param name="image_type" value="$(arg image_type)"/>
+      <param name="hdr_mode" value="$(arg hdr_mode)"/>
+      <param name="int0" value="$(arg int0)"/>
+      <param name="int1" value="$(arg int1)"/>
+      <param name="int2" value="$(arg int2)"/>
+      <param name="min_amplitude" value="$(arg min_amplitude)"/>
+      <param name="int_gray" value="$(arg int_gray)"/>
+      <param name="rgb_camera" value="$(arg rgb_camera)"/>
+      <param name="imu_port" value="$(arg imu_port)"/>
+
+    </node>
+
+    <node name="rviz" pkg="rviz" type="rviz" args= "-d $(find limu_tof_ros)/rviz/limu_tof_ros.rviz" > </node>
+    <node name="rqt_reconfigure" pkg="rqt_reconfigure" type="rqt_reconfigure"> </node>
+    <node name="base_link" pkg="tf" type="static_transform_publisher" args="0 0 0 0 0 0 map sensor_frame 1" />
+
+  </group>
+</launch>
