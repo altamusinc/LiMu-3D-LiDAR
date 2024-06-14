@@ -29,7 +29,7 @@ find_package(PCL REQUIRED)
 generate_dynamic_reconfigure_options(cfg/limu_tof_ros.cfg)
 
 catkin_package(
-  INCLUDE_DIRS include
+  INCLUDE_DIRS
   LIBRARIES limu_tof_ros
   CATKIN_DEPENDS roscpp dynamic_reconfigure message_runtime sensor_msgs
 )
@@ -37,7 +37,6 @@ catkin_package(
 add_definitions(${PCL_DEFINITIONS})
 
 include_directories( 
-  include
   ../../../../driver/include
   ${PCL_INCLUDE_DIRS}
   ${catkin_INCLUDE_DIRS}
