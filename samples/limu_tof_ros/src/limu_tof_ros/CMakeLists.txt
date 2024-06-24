@@ -16,6 +16,10 @@ find_package(catkin REQUIRED COMPONENTS
   tf
 )
 
+find_package(Boost REQUIRED COMPONENTS system thread)
+
+message("Boost version: ${Boost_VERSION}")
+
 find_package(OpenCV REQUIRED)
 
 message("OpenCV version: ${OpenCV_VERSION}")
@@ -29,7 +33,7 @@ find_package(PCL REQUIRED)
 generate_dynamic_reconfigure_options(cfg/limu_tof_ros.cfg)
 
 catkin_package(
-  INCLUDE_DIRS
+  INCLUDE_DIRS include
   LIBRARIES limu_tof_ros
   CATKIN_DEPENDS roscpp dynamic_reconfigure message_runtime sensor_msgs
 )
@@ -37,13 +41,16 @@ catkin_package(
 add_definitions(${PCL_DEFINITIONS})
 
 include_directories( 
+  include
   ../../../../driver/include
+  ${Boost_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
   ${catkin_INCLUDE_DIRS}
 )
 
 link_directories(
   ../../../../driver/lib/${ARCHITECTURE}
+  ${Boost_LIBRARY_DIRS}
   ${PCL_LIBRARY_DIRS}
   {CMAKE_THREAD_LIBS_INIT}
 )
@@ -56,7 +63,7 @@ add_dependencies(limu_camera_node ${PROJECT_NAME}_gencfg)
 add_dependencies(limu_camera_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 target_link_libraries(limu_camera_node ${catkin_LIBRARIES})
-target_link_libraries(limu_camera_node ${OpenCV_LIBS} ${PCL_LIBRARIES} limu_driver)
+target_link_libraries(limu_camera_node boost_thread ${OpenCV_LIBS} ${PCL_LIBRARIES} limu_driver)
 
 install(TARGETS limu_camera_node
    ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
