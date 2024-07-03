@@ -1,4 +1,4 @@
-# Limu Lidar Sensor
+# Limu ToF Sensor
 ## Introduction
 Limu Lidar Sensor
 ## List of Components/Tools
