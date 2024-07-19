@@ -53,5 +53,28 @@ In sensor configuration, there any many settings that will affect the image prod
 - Ensure sensor is plugged in
 - Ping sensor to ensure it is plugged in
 - Remember to use a different static IP address than the sensor for your PC
+
+## Troubleshooting RGB and IMU:
+
+- Edit the file camera.launch under folder limu_tof_ros/launch folder, 
+
+- Verify if the RGB camera ID is correct at line 19:
+```
+<arg name="rgb_camera" default="/dev/v4l/by-id/usb-046d_Logitech_Webcam_C930e_986A01BE-video-index0"/>
+```
+You may run a command:
+```
+ls /dev/v4l/by-id
+```
+the result should be:
+```
+usb-046d_Logitech_Webcam_C930e_986A01BE-video-index0
+```
+- to check if the RGB camera ID matches the one in the file camera.launch under folder limu_tof_ros/launch folder.
+
+- Verify if the IMU port is correct at line 20, make sure the USB port of IMU matches the one in file camera.launch under folder limu_tof_ros/launch folder.
+```
+/dev/ttyUSB0
+```
 ## Contact
 Contact us:  [info@vsemi.io](mailto:info@vsemi.io)
