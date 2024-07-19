@@ -49,6 +49,34 @@ In sensor configuration, there any many settings that will affect the image prod
 - **min_amplitude** can be used to remove any noise that can affect the image by causing the image to become less sensitive to ambient infared light, such as from the sun. It can also be used to ignore further and/or les reflective objects in the image at higher values
 ## Developing you own application
 ## The basics
+ - Refer to the sample application
+ - Copy and driver headers and lib over to your application
+ - Refer to the limu_camera_node.cpp
+ - Create instance of ToF camera:
+```
+   tof = ToF::tof320("10.10.31.180", "50660");
+```
+ - Connect callbacks:
+```
+connect to camera
+    tof->subscribeCameraInfo([&](std::shared_ptr<CameraInfo> ci) -> void { updateCameraInfo(ci); });
+    tof->subscribeFrame([&](std::shared_ptr<Frame> f) -> void {  updateFrame(f); });
+```
+ - Start streaming:
+```
+tof->streamDistance();
+```
+ - Implement callback function:
+```
+void updateFrame(std::shared_ptr<Frame> frame)
+{
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+
+    pcl::PointXYZRGB* data_ptr = reinterpret_cast<pcl::PointXYZRGB*>(frame->data_3d_xyz_rgb);
+    std::vector<pcl::PointXYZRGB> pts(data_ptr, data_ptr + frame->n_points);
+    cloud->points.insert(cloud->points.end(), pts.begin(), pts.end());
+}
+```
 ## Troubleshooting
 - Ensure sensor is plugged in
 - Ping sensor to ensure it is plugged in
