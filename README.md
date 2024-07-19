@@ -13,7 +13,9 @@ Limu Lidar Sensor
 ## Build the sample application
 - Open terminal from folder samples/limu_tof_ros
 - Run command:
+```
   catkin_make
+```
 ## Quick Start
 1. Power on sensor and connect it to PC using network cable
 2. Once connected, go to network settings and under 'Wired' click the configuration button
