@@ -81,6 +81,14 @@ void updateFrame(std::shared_ptr<Frame> frame)
 - Remember to use a different static IP address than the sensor for your PC
 
 ## Troubleshooting RGB and IMU:
+Currently the LiMu has 1 power cable and 2 ethernet cables:
+
+1. ToF 3D, directly connected to PC.
+2. RGB camera & IMU, needs a converter provided by VSemi, converts the ethernet to 2 USB ports, one is for RGB camera and another one is for IMU.
+You can run the demo program by completely ignoring the RGB camera & IMU, there is just a warning in the console that RGB and IMU are not available.
+If you would like to use the RGB camera and the IMU, connect the RGB camera & IMU ethernet cable to the converter and plug in the 2 USBs.
+
+####In case RGB or IMU is not working:
 
 - Edit the file camera.launch under folder limu_tof_ros/launch folder, 
 
