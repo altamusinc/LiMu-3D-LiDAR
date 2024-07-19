@@ -63,7 +63,7 @@ In sensor configuration, there any many settings that will affect the image prod
 ```
  - Start streaming:
 ```
-tof->streamDistance();
+    tof->streamDistance();
 ```
  - Implement callback function:
 ```
