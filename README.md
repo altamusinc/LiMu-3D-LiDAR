@@ -58,7 +58,6 @@ In sensor configuration, there any many settings that will affect the image prod
 ```
  - Connect callbacks:
 ```
-connect to camera
     tof->subscribeCameraInfo([&](std::shared_ptr<CameraInfo> ci) -> void { updateCameraInfo(ci); });
     tof->subscribeFrame([&](std::shared_ptr<Frame> f) -> void {  updateFrame(f); });
 ```
