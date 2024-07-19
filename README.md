@@ -10,12 +10,6 @@ Limu Lidar Sensor
 ## Prerequisite
 - Install ROS in your Ubuntu environment, please refer to the instruction:
   https://wiki.ros.org/Installation/Ubuntu
-## Build the sample application
-- Open terminal from folder samples/limu_tof_ros
-- Run command:
-```
-  catkin_make
-```
 ## Quick Start
 1. Power on sensor and connect it to PC using network cable
 2. Once connected, go to network settings and under 'Wired' click the configuration button
@@ -28,9 +22,15 @@ Limu Lidar Sensor
 6. Run ```ping 10.10.31.180``` to ensure there is a connection to sensor
 	- If connection fails, try restarting sensor before this step
 7. In limu_tos_ros folder, to view sample, run:
-```catkin_make```
-```sudo -s```
-```./run.sh```
+```
+catkin_make
+```
+```
+sudo -s
+```
+```
+./run.sh
+```
 ## Sample Application
 In the sample application, there is the point cloud, depth map, and RGB views
 ![Sample Application Screenshot](samples/limu_tof_ros/limu_sample.png)
