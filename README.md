@@ -88,7 +88,7 @@ Currently the LiMu has 1 power cable and 2 ethernet cables:
 You can run the demo program by completely ignoring the RGB camera & IMU, there is just a warning in the console that RGB and IMU are not available.
 If you would like to use the RGB camera and the IMU, connect the RGB camera & IMU ethernet cable to the converter and plug in the 2 USBs.
 
-####In case RGB or IMU is not working:
+#### In case RGB or IMU is not working:
 
 - Edit the file camera.launch under folder limu_tof_ros/launch folder, 
 
