@@ -82,7 +82,7 @@ void updateFrame(std::shared_ptr<Frame> frame)
 ```
  - Set each sensor works in differenct channel
 ```
- - tof->setModulation(modIndex, channel);
+   tof->setModulation(modIndex, channel);
 ```
 ## Troubleshooting
 - Ensure sensor is plugged in
