@@ -228,6 +228,7 @@ void updateCameraInfo(std::shared_ptr<CameraInfo> ci)
 void updateFrame(std::shared_ptr<Frame> frame)
 {
     geometry_msgs::PoseStamped pose_imu;
+    Eigen::Affine3f t_sensor = Eigen::Affine3f::Identity();
     if (imu_available)
     {
         float angle_x = 0;
@@ -238,14 +239,16 @@ void updateFrame(std::shared_ptr<Frame> frame)
         angle_y        = M_PI * imu_0->Angle[1] / 180.0;
         angle_z_sensor = M_PI * imu_0->Angle[2] / 180.0;
 
+        //std::cout << "angle => angle_x: " << angle_x << " angle_y: " << angle_y << " angle_z_sensor: " << angle_z_sensor << std::endl;
+
         Eigen::Matrix3f r_imu;
 
         r_imu =
-                Eigen::AngleAxisf(angle_z_sensor, Eigen::Vector3f::UnitZ())
-            * Eigen::AngleAxisf(angle_y,        Eigen::Vector3f::UnitY())
-            * Eigen::AngleAxisf(angle_x,        Eigen::Vector3f::UnitX());
-        Eigen::Affine3f t_imu = Eigen::Affine3f::Identity();
-        t_imu.rotate (r_imu);
+                Eigen::AngleAxisf(0, Eigen::Vector3f::UnitZ())
+            * Eigen::AngleAxisf(0,        Eigen::Vector3f::UnitY())
+            * Eigen::AngleAxisf(M_PI * (30) / 180.0,        Eigen::Vector3f::UnitX());
+        
+        t_sensor.rotate (r_imu);
 
         Eigen::Quaternionf q_imu(r_imu);
 
@@ -256,6 +259,18 @@ void updateFrame(std::shared_ptr<Frame> frame)
 		pose_imu.pose.orientation.x = q_imu.x();
 		pose_imu.pose.orientation.y = q_imu.y();
 		pose_imu.pose.orientation.z = q_imu.z();
+
+        Eigen::Affine3f t_sensor_2_world = Eigen::Affine3f::Identity();
+		Eigen::Matrix3f m;
+		m <<
+		1, 0, 0,
+		0, 0, -1,
+		0, -1, 0;
+		t_sensor_2_world.rotate (m);
+
+        t_sensor = t_sensor * t_sensor_2_world;
+
+        t_sensor = t_sensor.inverse();
     }
 
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
@@ -267,13 +282,6 @@ void updateFrame(std::shared_ptr<Frame> frame)
     cv::Mat depth_bgr(frame->height, frame->width, CV_8UC3, frame->data_2d_bgr);
     cv::Mat amplitude(frame->height, frame->width, CV_32F,  frame->data_amplitude);
 
-    //float d_amplitude = amplitude_max - amplitude_min;
-    //mat_amplitude = 255 * mat_amplitude / d_amplitude;
-    //mat_amplitude.convertTo(mat_amplitude, CV_8U);
-    //cv::cvtColor(mat_amplitude,  mat_amplitude,  cv::COLOR_GRAY2BGR);
-    //cv::Mat mat_amplitude_flipped; 
-    //cv::flip(mat_amplitude, mat_amplitude_flipped, 1);
-
     cv::Mat mat_depth_bgr_flipped; 
     cv::flip(depth_bgr, mat_depth_bgr_flipped, 1);
     
@@ -284,19 +292,18 @@ void updateFrame(std::shared_ptr<Frame> frame)
     cloud->header.stamp = pcl_conversions::toPCL(curTime);
     cloud->points.resize(nPixel);
 
-    cloud_publisher.publish(cloud);
-    //publish_image(amplitude_publisher, mat_amplitude_flipped, curTime);
-    publish_image(depth_Publisher, mat_depth_bgr_flipped, curTime);
-    if (rgb_available)
-    {
-        publish_image(rgb_publisher, rgb_image, curTime);
-    }
-
     if (imu_available)
     {
 		pose_imu.header.frame_id = strFrameID;
 		pose_imu.header.stamp = curTime;
         imu_publisher.publish(pose_imu);
+    }
+
+    cloud_publisher.publish(cloud);
+    publish_image(depth_Publisher, mat_depth_bgr_flipped, curTime);
+    if (rgb_available)
+    {
+        publish_image(rgb_publisher, rgb_image, curTime);
     }
 
     n_frames ++;
@@ -395,7 +402,6 @@ int main(int argc, char **argv)
         rgb_available = videoCapture->open(rgb_camera);
         if (rgb_available)
         {
-            videoCapture->set(cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('M','J','P','G'));
             videoCapture->set(cv::CAP_PROP_FRAME_WIDTH, 640);
             videoCapture->set(cv::CAP_PROP_FRAME_HEIGHT, 480);
 

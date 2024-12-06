@@ -62,7 +62,7 @@ add_dependencies(limu_camera_node ${PROJECT_NAME}_gencfg)
 add_dependencies(limu_camera_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 target_link_libraries(limu_camera_node ${catkin_LIBRARIES})
-target_link_libraries(limu_camera_node boost_thread ${OpenCV_LIBS} ${PCL_LIBRARIES} limu_driver)
+target_link_libraries(limu_camera_node ${Boost_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} limu_driver)
 
 install(TARGETS limu_camera_node
    ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}

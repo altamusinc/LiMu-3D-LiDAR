@@ -5,6 +5,18 @@
 #include "camera_info.hpp"
 #include <boost/thread.hpp>
 
+struct IPAddress {
+  uint8_t ip0;
+  uint8_t ip1;
+  uint8_t ip2;
+  uint8_t ip3;
+
+  IPAddress(uint8_t a0, uint8_t a1, uint8_t a2, uint8_t a3) : ip0(a0), ip1(a1), ip2(a2), ip3(a3)
+  {
+
+  }
+};
+
 class ToF {
 public:
   static ToF* tof320(const char* host, const char* port);
@@ -23,6 +35,10 @@ public:
   virtual void setModulation(const uint8_t index, const uint8_t channel) = 0;
   virtual void setFilter(const bool medianFilter, const bool averageFilter, const uint16_t temporalFactor, const uint16_t temporalThreshold, const uint16_t edgeThreshold,
             const uint16_t temporalEdgeThresholdLow, const uint16_t temporalEdgeThresholdHigh, const uint16_t interferenceDetectionLimit, const bool interferenceDetectionUseLastValue) = 0;
+
+  virtual void setPrecompute(bool precompute) = 0;
+
+  virtual void setIPAddress(IPAddress ip, IPAddress netmask, IPAddress gateway) = 0;
 
   virtual void subscribeFrame(std::function<void (std::shared_ptr<Frame>)>) = 0;
   virtual void subscribeCameraInfo(std::function<void (std::shared_ptr<CameraInfo>)>) = 0;
