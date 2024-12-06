@@ -7,7 +7,7 @@ cmake ..
 
 make
 
-./set_camera_ip <current IP address> <new IP address>
+./set_camera_ip <current IP address> <new IP address> <new subnet mask> <new gateway>
 
 power off the Limu camera
 
