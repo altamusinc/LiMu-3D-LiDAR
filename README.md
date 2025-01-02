@@ -75,6 +75,15 @@ void updateFrame(std::shared_ptr<Frame> frame)
     cloud->points.insert(cloud->points.end(), pts.begin(), pts.end());
 }
 ```
+## Multiple Sensors
+ - Use the IP setting tool provided in tools directory, to modify the default IP address of the sensor, so that each sensor should have unique IP address.
+```
+   ./set_camera_ip <current IP address> <new IP address> <new subnet mask> <new gateway>
+```
+ - Set each sensor works in differenct channel
+```
+   tof->setModulation(modIndex, channel);
+```
 ## Troubleshooting
 - Ensure sensor is plugged in
 - Ping sensor to ensure it is plugged in
