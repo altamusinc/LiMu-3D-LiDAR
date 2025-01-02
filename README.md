@@ -11,17 +11,19 @@ Limu Lidar Sensor
 - Install ROS in your Ubuntu environment, please refer to the instruction:
   https://wiki.ros.org/Installation/Ubuntu
 ## Quick Start
-1. Power on sensor and connect it to PC using network cable
-2. Once connected, go to network settings and under 'Wired' click the configuration button
+1. Connect sensor power and data cables
+![Pinout & Wiring](LiMu_Pinout.jpg)
+3. Power on sensor and connect it to PC using network cable
+4. Once connected, go to network settings and under 'Wired' click the configuration button
 ![Wired connection settings](samples/limu_tof_ros/limu_wired.png)
-4. Refer to above screenshot. Click on 'IPv4', then under 'IPv4 Method' click 'Manual'
+5. Refer to above screenshot. Click on 'IPv4', then under 'IPv4 Method' click 'Manual'
 	- Under 'Address', add a static IP address to PC in the form of ```10.10.31.XXX```, the last 3 digits cannot be exactly 180 since that is the sensor's static IP address
 	- Under 'Netmask', add ```255.255.255.0```
 	- Finally, click 'Apply' and wait for PC to be connected
-5. Run ```ifconfig``` to verify the above settings
-6. Run ```ping 10.10.31.180``` to ensure there is a connection to sensor
+6. Run ```ifconfig``` to verify the above settings
+7. Run ```ping 10.10.31.180``` to ensure there is a connection to sensor
 	- If connection fails, try restarting sensor before this step
-7. In limu_tos_ros folder, to view sample, run:
+8. In limu_tos_ros folder, to view sample, run:
 ```
 catkin_make
 ```
