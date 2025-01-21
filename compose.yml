@@ -1,0 +1,17 @@
+services:
+  ros-master:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: limu-ros-dev
+    privileged: true
+    group_add:
+            - 44
+    volumes:
+      - ./:/root
+      - /dev/v4l:/dev/v4l
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    environment:
+      - DISPLAY
+      - QT_X11_NO_MITSHM=1
+    tty: true
