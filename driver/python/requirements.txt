@@ -1,2 +1,4 @@
 setuptools
 pybind11
+numpy
+open3d
