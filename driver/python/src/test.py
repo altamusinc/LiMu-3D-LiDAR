@@ -36,8 +36,6 @@ def handleFrame(frame):
     xyz_rgb_np = np.array(frame.get_xyz_rgb()).reshape(frame.n_points, 8)
     xyz = xyz_rgb_np[:,:3]
     geometry.points = o3d.utility.Vector3dVector(xyz)
-    geometry.estimate_normals()
-    # pcd_xyz.paint_uniform_color([0, 0, 1])
     if first:
         vis.add_geometry(geometry)
         first = False
@@ -85,17 +83,10 @@ opt.show_coordinate_frame = True
 opt.background_color = np.asarray([0.25, 0.25, 0.25])
 
 tof.subscribeFrame(handleFrame)
-# vis.run()
+
 while True:
     if update is True:
         vis.update_geometry(geometry)
         vis.poll_events()
         vis.update_renderer()
-        # print("updated")
         update = False
-
-    # user_input = input("Enter a command (or 'quit' to exit): ")
-    # if user_input == "quit":
-    #     break
-    # # Process the user input
-    # print("You entered:", user_input) 
