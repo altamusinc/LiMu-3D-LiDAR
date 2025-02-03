@@ -1,23 +1,14 @@
 import limu_py
 import numpy as np
 import open3d as o3d
+import open3d.visualization.gui as gui
 import cv2
-import tkinter as tk
 import threading
+import time
 from pynput import keyboard
 
 frames = {}
 
-window = tk.Tk()
-window.title("My First GUI")
-
-label = tk.Label(window, text="Hello, World!")
-label.pack()
-
-button = tk.Button(window, text="Click Me!", command=lambda: print("Button clicked!"))
-button.pack()
-
-vis = o3d.visualization.Visualizer()
 geometry = o3d.geometry.PointCloud()
 update = False
 first = True
@@ -29,6 +20,15 @@ x_scale = 1
 y_scale = 1
 x_trans = 0
 y_trans = 0
+
+
+app = gui.Application.instance
+app.initialize()
+window = app.create_window("Open3D GUI Example", 1024, 768)
+scene = gui.SceneWidget()
+scene.scene = o3d.visualization.rendering.Open3DScene(window.renderer)
+window.add_child(scene)
+scene.scene.add_geometry("PointCloud", geometry, o3d.visualization.rendering.MaterialRecord())
 
 def on_press(key):
     global color_from_cam
@@ -58,6 +58,23 @@ def on_press(key):
         elif key == keyboard.Key.page_up:
             y_scale += 0.01
         print(f"X Scale: {x_scale} Y Scale: {y_scale} X Trans: {x_trans} Y Trans: {y_trans}")
+
+def update_geometry_background():
+    global update
+    global geometry
+    global app
+    global window
+
+    def update_geometry():
+        def update_on_main_thread():
+            scene.scene.clear_geometry()
+            scene.scene.add_geometry("PointCloud", geometry, o3d.visualization.rendering.MaterialRecord())
+        app.post_to_main_thread(window, update_on_main_thread)
+    
+    while True:
+        if update is True:
+            update_geometry()
+            update = False
 
 def visualize(cloud):
     geometries = []
@@ -92,10 +109,8 @@ def remap_image(src):
     return dst
         
 def handleFrame(limu_frame):
-    global vis
     global geometry
     global update
-    global first
     global color_from_cam
     global cam_frame_raw
 
@@ -123,11 +138,6 @@ def handleFrame(limu_frame):
         rgb = rgb_int.reshape(rgb_float.size, 8)
         rgb = rgb[:,-3:]/255
         geometry.colors = o3d.utility.Vector3dVector(rgb)
-
-    if first:
-        vis.add_geometry(geometry)
-        first = False
-        print("Adding")
 
     update = True
 
@@ -162,26 +172,17 @@ def setParameters():
 tof = limu_py.ToF.tof320("10.10.31.180", "50660")
 setParameters()
 tof.streamDistance()
-vis.create_window(width=1200,height=800,left=2000,top=100)
-opt = vis.get_render_option()
-opt.point_size = 1
-opt.light_on = True
-opt.show_coordinate_frame = True
-opt.background_color = np.asarray([0.25, 0.25, 0.25])
+tof.subscribeFrame(handleFrame)
+
 cap = cv2.VideoCapture(1)
 
 if not cap.isOpened():
     print("Error: Could not open camera.")
     exit()
 
-tof.subscribeFrame(handleFrame)
-
 listener = keyboard.Listener(on_press=on_press,)
 listener.start()
 
-while True:
-    if update is True:
-        vis.update_geometry(geometry)
-        vis.poll_events()
-        vis.update_renderer()
-        update = False
+update_thread = threading.Thread(target=update_geometry_background)
+update_thread.start()
+app.run()
