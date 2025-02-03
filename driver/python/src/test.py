@@ -9,14 +9,31 @@ from pynput import keyboard
 
 class myGUI:
     update = False
-    def __init__(self, geometry):
+    def __init__(self, geometry, lidar):
+
+        self.lidar = lidar
         self.geometry = geometry
         self.app = gui.Application.instance
         self.app.initialize()
         self.window = self.app.create_window("Open3D GUI Example", 1024, 768)
+        em = self.window.theme.font_size
         self.scene = gui.SceneWidget()
         self.scene.scene = o3d.visualization.rendering.Open3DScene(self.window.renderer)
-        self.window.add_child(self.scene)
+
+        off_button = gui.Button("Off")
+        off_button.set_on_clicked(self.lidar.streamStop)
+
+        on_button = gui.Button("On")
+        on_button.set_on_clicked(self.lidar.streamDistance)
+
+
+        layout = gui.Vert(0, gui.Margins(0.5 * em, 0.5 * em, 0.5 * em,
+                                         0.5 * em))
+        layout.add_child(self.scene)
+        layout.add_child(off_button)
+        layout.add_child(on_button)
+
+        self.window.add_child(layout)
         self.scene.scene.add_geometry("PointCloud", self.geometry, o3d.visualization.rendering.MaterialRecord())
         update_thread = threading.Thread(target=self.update_geometry_background)
         update_thread.start()
@@ -76,6 +93,11 @@ class Lidar:
 
     def streamDistance(self):
         self.tof.streamDistance()
+        print("Starting Stream Distance")
+
+    def streamStop(self):
+        self.tof.stopStream()
+        print("Stopping Stream")
 
     def setFrameCallback(self, callback):
         self.tof.subscribeFrame(callback)
@@ -173,8 +195,8 @@ def on_press(key):
 
 my_point_cloud = myPointCloud()
 lidar = Lidar()
-my_gui = myGUI(my_point_cloud.geometry)
-rgb_cam = cv2.VideoCapture(1)
+my_gui = myGUI(my_point_cloud.geometry, lidar)
+rgb_cam = cv2.VideoCapture(0)
 
 # Glue the point cloud handler to the lidar frame callback
 lidar.setFrameCallback(my_point_cloud.handleFrame)
@@ -190,6 +212,6 @@ if not rgb_cam.isOpened():
 listener = keyboard.Listener(on_press=on_press,)
 listener.start()
 
-lidar.streamDistance()
+# lidar.streamDistance()
 
 my_gui.run()
