@@ -1,75 +1,12 @@
 import limu_py
 import numpy as np
 import open3d as o3d
-import open3d.visualization.gui as gui
 import cv2
 import threading
 import time
+from flask import Flask, jsonify
 from pynput import keyboard
-
-class myGUI:
-    update = False
-    def __init__(self, geometry, lidar):
-
-        self.lidar = lidar
-        self.geometry = geometry
-        self.app = gui.Application.instance
-        self.app.initialize()
-        self.window = self.app.create_window("Open3D GUI Example", 1024, 768)
-        em = self.window.theme.font_size
-        self.scene = gui.SceneWidget()
-        self.scene.scene = o3d.visualization.rendering.Open3DScene(self.window.renderer)
-
-        off_button = gui.Button("Off")
-        off_button.set_on_clicked(self.lidar.streamStop)
-
-        on_button = gui.Button("On")
-        on_button.set_on_clicked(self.lidar.streamDistance)
-
-
-        layout = gui.Vert(0, gui.Margins(0.5 * em, 0.5 * em, 0.5 * em,
-                                         0.5 * em))
-        layout.add_child(self.scene)
-        layout.add_child(off_button)
-        layout.add_child(on_button)
-
-        self.window.add_child(layout)
-        self.scene.scene.add_geometry("PointCloud", self.geometry, o3d.visualization.rendering.MaterialRecord())
-        update_thread = threading.Thread(target=self.update_geometry_background)
-        update_thread.start()
-
-    def run(self):
-        self.app.run()
-
-    def handle_new_frame(self):
-        self.update = True
-
-    def update_geometry_background(self):
-        def update_geometry():
-            def update_on_main_thread():
-                self.scene.scene.clear_geometry()
-                self.scene.scene.add_geometry("PointCloud", self.geometry, o3d.visualization.rendering.MaterialRecord())
-            self.app.post_to_main_thread(self.window, update_on_main_thread)
-        
-        while True:
-            if self.update is True:
-                update_geometry()
-                self.update = False
-
-    def visualize_debug(self, cloud):
-        geometries = []
-        geometries.append(cloud)
-        o3d.visualization.draw_geometries(geometries,
-                                    width=1200,height=800,left=2000,top=100,
-                                    window_name='Vis',
-                                    zoom=0.75,
-                                    front=[1,-1,1],
-                                    lookat=[0,0,1],
-                                    up=[0,0,1],
-                                    point_show_normal=False,
-                                    mesh_show_wireframe=False,
-                                    mesh_show_back_face=False)
-        
+ 
 class Lidar:
     lensType = 0
     frequencyModulation = 2
@@ -88,6 +25,7 @@ class Lidar:
     roi_bottomY = 239
 
     def __init__(self):
+        print("connecting to LIMU")
         self.tof = limu_py.ToF.tof320("10.10.31.180", "50660")
         self.setParameters()
 
@@ -119,7 +57,9 @@ class myPointCloud:
     y_trans = 0
 
     color_from_cam = False
-    geometry = o3d.geometry.PointCloud()
+    o3d_geometry = o3d.geometry.PointCloud()
+    np_points = np.zeros(6)
+
     frame_addresses = {}
     alert_callback = None
 
@@ -131,7 +71,8 @@ class myPointCloud:
         # convert the frame list to an np array, and reshape to 8 things wide
         xyz_rgb_np = np.array(limu_frame.get_xyz_rgb()).reshape(limu_frame.n_points, 8)
         xyz = xyz_rgb_np[:,:3]
-        self.geometry.points = o3d.utility.Vector3dVector(xyz)
+        self.np_points = xyz
+        self.o3d_geometry.points = o3d.utility.Vector3dVector(xyz)
 
         if self.color_from_cam:
             global rgb_cam
@@ -142,13 +83,13 @@ class myPointCloud:
             cam_frame = cv2.flip(cam_frame, 1)
             cam_frame = self.remap_image(cam_frame)
             cam_frame = cam_frame.reshape(76800, 3) / 255
-            self.geometry.colors = o3d.utility.Vector3dVector(cam_frame)
+            self.o3d_geometry.colors = o3d.utility.Vector3dVector(cam_frame)
         else:
             rgb_float = np.array(xyz_rgb_np[:limu_frame.n_points,4])
             rgb_int = rgb_float.view(np.uint8)
             rgb = rgb_int.reshape(rgb_float.size, 8)
             rgb = rgb[:,-3:]/255
-            self.geometry.colors = o3d.utility.Vector3dVector(rgb)
+            self.o3d_geometry.colors = o3d.utility.Vector3dVector(rgb)
 
         if self.alert_callback is not None:
             self.alert_callback()
@@ -195,14 +136,15 @@ def on_press(key):
 
 my_point_cloud = myPointCloud()
 lidar = Lidar()
-my_gui = myGUI(my_point_cloud.geometry, lidar)
+# my_gui = myGUI(my_point_cloud.geometry, lidar)
 rgb_cam = cv2.VideoCapture(0)
 
 # Glue the point cloud handler to the lidar frame callback
 lidar.setFrameCallback(my_point_cloud.handleFrame)
+lidar.streamDistance()
 
 # Glue the GUI to the point cloud handler so it updates when a new point cloud is processed.
-my_point_cloud.alert_callback = my_gui.handle_new_frame
+# my_point_cloud.alert_callback = my_gui.handle_new_frame
 
 # Make sure we can open the camera
 if not rgb_cam.isOpened():
@@ -212,6 +154,19 @@ if not rgb_cam.isOpened():
 listener = keyboard.Listener(on_press=on_press,)
 listener.start()
 
+webAPI = Flask(__name__)
+
+@webAPI.route("/points")
+def post_points():
+    print("start")
+    res = jsonify(my_point_cloud.np_points.tolist())
+    res.headers.add('Access-Control-Allow-Origin', '*')
+    print("stop")
+    return res
+
 # lidar.streamDistance()
 
-my_gui.run()
+# my_gui.run()
+
+if __name__ == '__main__':
+    webAPI.run(debug=True)

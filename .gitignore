@@ -9,3 +9,4 @@ __pycache__
 build/
 driver/python/python_example.egg-info/
 driver/python/dist
+driver/python/src/web/node_modules/

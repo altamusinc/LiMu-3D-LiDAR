@@ -1,0 +1,15 @@
+{
+  "dependencies": {
+    "http-server": "^14.1.1"
+  },
+  "name": "helios",
+  "version": "0.1.0",
+  "description": "Helios Client Viewer",
+  "main": "viewer.js",
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}
