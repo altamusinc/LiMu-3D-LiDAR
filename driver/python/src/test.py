@@ -4,8 +4,11 @@ import open3d as o3d
 import cv2
 import threading
 import time
-from flask import Flask, jsonify
+import tempfile
+from flask import Flask, send_file, send_from_directory
 from pynput import keyboard
+import json_numpy
+from flask_cors import CORS
  
 class Lidar:
     lensType = 0
@@ -136,15 +139,10 @@ def on_press(key):
 
 my_point_cloud = myPointCloud()
 lidar = Lidar()
-# my_gui = myGUI(my_point_cloud.geometry, lidar)
 rgb_cam = cv2.VideoCapture(0)
 
 # Glue the point cloud handler to the lidar frame callback
 lidar.setFrameCallback(my_point_cloud.handleFrame)
-lidar.streamDistance()
-
-# Glue the GUI to the point cloud handler so it updates when a new point cloud is processed.
-# my_point_cloud.alert_callback = my_gui.handle_new_frame
 
 # Make sure we can open the camera
 if not rgb_cam.isOpened():
@@ -155,18 +153,18 @@ listener = keyboard.Listener(on_press=on_press,)
 listener.start()
 
 webAPI = Flask(__name__)
+CORS(webAPI, resources={r"/*": {"origins": "*"}})
 
 @webAPI.route("/points")
-def post_points():
-    print("start")
-    res = jsonify(my_point_cloud.np_points.tolist())
-    res.headers.add('Access-Control-Allow-Origin', '*')
-    print("stop")
-    return res
+def latestPointsAsPCD():
+    with tempfile.NamedTemporaryFile(suffix=".pcd") as vfile:
+        o3d.io.write_point_cloud(vfile.name, my_point_cloud.o3d_geometry)
+        return send_file(vfile.name)
 
-# lidar.streamDistance()
-
-# my_gui.run()
+@webAPI.route("/<path:filename>")
+def serveHomepage(filename):
+    return send_from_directory("./web", filename)
 
 if __name__ == '__main__':
     webAPI.run(debug=True)
+    
