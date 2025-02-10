@@ -5,7 +5,7 @@ import cv2
 import threading
 import time
 import tempfile
-from flask import Flask, send_file, send_from_directory
+from flask import Flask, send_file, send_from_directory, render_template
 from pynput import keyboard
 import json_numpy
 from flask_cors import CORS
@@ -94,6 +94,14 @@ class myPointCloud:
             rgb = rgb[:,-3:]/255
             self.o3d_geometry.colors = o3d.utility.Vector3dVector(rgb)
 
+        nan_rows_indices = np.where(np.isnan(self.o3d_geometry.points).any(axis=1))[0]
+        self.o3d_geometry = self.o3d_geometry.select_by_index(nan_rows_indices, True)
+
+        zeros = np.argwhere(np.array(self.o3d_geometry.points) == 0)
+        zeros = np.unique(zeros[:,0])
+
+        self.o3d_geometry = self.o3d_geometry.select_by_index(zeros, True)
+        
         if self.alert_callback is not None:
             self.alert_callback()
 
@@ -139,7 +147,7 @@ def on_press(key):
 
 my_point_cloud = myPointCloud()
 lidar = Lidar()
-rgb_cam = cv2.VideoCapture(0)
+rgb_cam = cv2.VideoCapture(1)
 
 # Glue the point cloud handler to the lidar frame callback
 lidar.setFrameCallback(my_point_cloud.handleFrame)
@@ -150,7 +158,7 @@ if not rgb_cam.isOpened():
     exit()
 
 listener = keyboard.Listener(on_press=on_press,)
-listener.start()
+# listener.start()
 
 webAPI = Flask(__name__)
 CORS(webAPI, resources={r"/*": {"origins": "*"}})
@@ -158,12 +166,36 @@ CORS(webAPI, resources={r"/*": {"origins": "*"}})
 @webAPI.route("/points")
 def latestPointsAsPCD():
     with tempfile.NamedTemporaryFile(suffix=".pcd") as vfile:
-        o3d.io.write_point_cloud(vfile.name, my_point_cloud.o3d_geometry)
+        o3d.io.write_point_cloud(vfile.name, my_point_cloud.o3d_geometry, write_ascii=True)
         return send_file(vfile.name)
 
+@webAPI.route("/")
+def serveHomepage():
+    return render_template("index.html")
+
 @webAPI.route("/<path:filename>")
-def serveHomepage(filename):
+def serveFile(filename):
     return send_from_directory("./web", filename)
+
+@webAPI.route("/api/on", methods = ['POST'])
+def turnOnLidar():
+    lidar.streamDistance()
+    return "1"
+
+@webAPI.route("/api/off", methods = ['POST'])
+def turnOffLidar():
+    lidar.streamStop()
+    return "1"
+
+@webAPI.route("/api/color_webcam", methods = ['POST'])
+def webcamColor():
+    my_point_cloud.color_from_cam = True
+    return "1"
+
+@webAPI.route("/api/color_default", methods = ['POST'])
+def defaultColor():
+    my_point_cloud.color_from_cam = False
+    return "1"
 
 if __name__ == '__main__':
     webAPI.run(debug=True)
