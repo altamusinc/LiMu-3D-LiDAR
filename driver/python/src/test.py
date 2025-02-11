@@ -4,11 +4,12 @@ import open3d as o3d
 import cv2
 import io
 import time
+import json
 from flask import Flask, send_file, send_from_directory, render_template, Response
 from pynput import keyboard
 from flask_cors import CORS
 from collections import deque
- 
+
 class BoundedQueue:
     def __init__(self, max_size):
         self.queue = deque(maxlen=max_size)
@@ -32,47 +33,75 @@ class BoundedQueue:
         return len(self.queue)
     
 class Lidar:
-    lensType = 0
-    frequencyModulation = 2
-    channel = 0
-    hdr_mode = 2
-    int0 = 50
-    int1 = 400 
-    int2 = 4000
-    intGr = 10000
-    minAmplitude = 60
-    lensCenterOffsetX = 0
-    lensCenterOffsetY = 0
-    roi_leftX = 0
-    roi_topY = 0
-    roi_rightX = 319
-    roi_bottomY = 239
+
+    settings = {"lens_type": 0,
+                "frequency_modulation": 2,
+                "channel": 0,
+                "image_type": 1,
+                "hdr_mode": 2,
+                "integration_time_tof_1": 50,
+                "integration_time_tof_2": 400,
+                "integration_time_tof_3": 4000,
+                "integration_time_tof_Gr": 10000,
+                "min_amplitude": 60,
+                "lens_center_offset_x": 0,
+                "lens_center_offset_y": 0,
+                "roi_left_x": 0,
+                "roi_right_x": 319,
+                "roi_top_y": 0,
+                "roi_bottom_y": 319,
+                "roi_height": 0,
+                }
 
     def __init__(self):
         print("connecting to LIMU")
         self.tof = limu_py.ToF.tof320("10.10.31.180", "50660")
-        self.setParameters()
+        self.applySettings()
+
+    def update_settings_from_json(self, settings_json):
+        new_settings_dict: dict = json.loads(settings_json)
+        print(new_settings_dict)
+        toApply: bool = False
+        for key, value in new_settings_dict.items():
+            print(f"{key} : {value}") 
+            if key in self.settings and value != self.settings[key]:
+                self.settings[key] = value
+                toApply = True
+        if toApply:
+            self.applySettings()
+
+    def send_settings_as_json(self) -> str:
+        return json.dumps(self.settings)
 
     def streamDistance(self):
+        self.settings["image_type"] = 1
         self.tof.streamDistance()
         print("Starting Stream Distance")
 
     def streamStop(self):
+        self.settings["image_type"] = 0
         self.tof.stopStream()
         print("Stopping Stream")
 
     def setFrameCallback(self, callback):
         self.tof.subscribeFrame(callback)
 
-    def setParameters(self):
-        self.tof.setModulation(self.frequencyModulation, self.channel)
-        self.tof.setMinAmplitude(self.minAmplitude)
-        self.tof.setIntegrationTime(self.int0, self.int1, self.int2, self.intGr)
-        self.tof.setHDRMode(self.hdr_mode)
-        self.tof.setRoi(self.roi_leftX, self.roi_topY, self.roi_rightX, self.roi_bottomY)
-        self.tof.setLensType(self.lensType)
-        self.tof.setLensCenter(self.lensCenterOffsetX, self.lensCenterOffsetY)
+    def applySettings(self):
+        self.tof.setModulation(self.settings["frequency_modulation"], self.settings["channel"])
+        self.tof.setMinAmplitude(self.settings["min_amplitude"])
+        self.tof.setIntegrationTime(self.settings["integration_time_tof_1"], self.settings["integration_time_tof_2"], self.settings["integration_time_tof_3"], self.settings["integration_time_tof_Gr"])
+        self.tof.setHDRMode(self.settings["hdr_mode"])
+        self.tof.setRoi(self.settings["roi_left_x"], self.settings["roi_top_y"], self.settings["roi_right_x"], self.settings["roi_bottom_y"])
+        self.tof.setLensType(self.settings["lens_type"])
+        self.tof.setLensCenter(self.settings["lens_center_offset_x"], self.settings["lens_center_offset_y"])
         self.tof.setFilter(0, 0, 0, 0, 0, 0, 0, 0, 0)
+        match self.settings["image_type"]:
+            case 0:
+                self.tof.stopStream()
+            case 1:
+                self.tof.streamDistance()
+            case 2:
+                self.tof.streamDistanceAmplitude()
 
 class myPointCloud:
     cam_x_scale = 1
@@ -169,32 +198,6 @@ class myPointCloud:
                     map_y[i,j] = 0
         self._cam_remap_map = (map_x, map_y)
 
-
-def on_press(key):
-    global my_point_cloud
-    try:
-        if key.char == "c":
-            my_point_cloud.color_from_cam = not my_point_cloud.color_from_cam
-        
-    except AttributeError:
-        if key == keyboard.Key.left:
-            my_point_cloud.y_trans -= 0.01
-        elif key == keyboard.Key.right:
-            my_point_cloud.y_trans += 0.01
-        elif key == keyboard.Key.up:
-            my_point_cloud.x_trans += 0.01
-        elif key == keyboard.Key.down:
-            my_point_cloud.x_trans -= 0.01
-        elif key == keyboard.Key.delete:
-            my_point_cloud.x_scale -= 0.01
-        elif key == keyboard.Key.page_down:
-            my_point_cloud.x_scale += 0.01
-        elif key == keyboard.Key.insert:
-            my_point_cloud.y_scale -= 0.01
-        elif key == keyboard.Key.page_up:
-            my_point_cloud.y_scale += 0.01
-        print(f"X Scale: {my_point_cloud.x_scale} Y Scale: {my_point_cloud.y_scale} X Trans: {my_point_cloud.x_trans} Y Trans: {my_point_cloud.y_trans}")
-
 my_point_cloud = myPointCloud()
 lidar = Lidar()
 rgb_cam = cv2.VideoCapture(0)
@@ -207,9 +210,6 @@ lidar.streamDistance()
 if not rgb_cam.isOpened():
     print("Error: Could not open camera.")
     exit()
-
-listener = keyboard.Listener(on_press=on_press,)
-# listener.start()
 
 webAPI = Flask(__name__)
 CORS(webAPI, resources={r"/*": {"origins": "*"}})
@@ -231,7 +231,7 @@ def lastestPointsAsBytes():
     colors_b = colors.tobytes()
     combined = points_b + colors_b
     t_end = time.perf_counter()
-    print(f"Pack Time: {(t_end - t_start) * 1000:.1f} ms")
+    # print(f"Pack Time: {(t_end - t_start) * 1000:.1f} ms")
     return Response(combined, mimetype="application/octet-stream")
 
 @webAPI.route("/")
@@ -256,6 +256,10 @@ def turnOffLidar():
 def webcamColor():
     my_point_cloud.color_from_cam = True
     return "1"
+
+@webAPI.route("/currentSettings")
+def sendCurrentSettings():
+    return Response(lidar.send_settings_as_json(), mimetype="application/json")
 
 @webAPI.route("/api/color_default", methods = ['POST'])
 def defaultColor():
