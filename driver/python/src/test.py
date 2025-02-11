@@ -4,6 +4,7 @@ import open3d as o3d
 import cv2
 import threading
 import time
+import io
 import tempfile
 from flask import Flask, send_file, send_from_directory, render_template
 from pynput import keyboard
@@ -66,6 +67,8 @@ class myPointCloud:
     frame_addresses = {}
     alert_callback = None
 
+    pcdBytes = bytes()
+
     def handleFrame(self, limu_frame):
         if id(limu_frame) not in self.frame_addresses:
             self.frame_addresses[id(limu_frame)] = limu_frame
@@ -88,19 +91,15 @@ class myPointCloud:
             cam_frame = cam_frame.reshape(76800, 3) / 255
             self.o3d_geometry.colors = o3d.utility.Vector3dVector(cam_frame)
         else:
-            rgb_float = np.array(xyz_rgb_np[:limu_frame.n_points,4])
-            rgb_int = rgb_float.view(np.uint8)
-            rgb = rgb_int.reshape(rgb_float.size, 8)
-            rgb = rgb[:,-3:]/255
-            self.o3d_geometry.colors = o3d.utility.Vector3dVector(rgb)
+            self.o3d_geometry.paint_uniform_color([1, 0, 0])
+        #     rgb_float = np.array(xyz_rgb_np[:limu_frame.n_points,4])
+        #     rgb_int = rgb_float.view(np.uint8)
+        #     rgb = rgb_int.reshape(rgb_float.size, 8)
+        #     rgb = rgb[:,-3:]/255
+        #     self.o3d_geometry.colors = o3d.utility.Vector3dVector(rgb)
 
-        nan_rows_indices = np.where(np.isnan(self.o3d_geometry.points).any(axis=1))[0]
-        self.o3d_geometry = self.o3d_geometry.select_by_index(nan_rows_indices, True)
-
-        zeros = np.argwhere(np.array(self.o3d_geometry.points) == 0)
-        zeros = np.unique(zeros[:,0])
-
-        self.o3d_geometry = self.o3d_geometry.select_by_index(zeros, True)
+        self.o3d_geometry = self.o3d_geometry.remove_non_finite_points()
+        self.pcdBytes = o3d.io.write_point_cloud_to_bytes(self.o3d_geometry,format='mem::xyz', write_ascii=False)
         
         if self.alert_callback is not None:
             self.alert_callback()
@@ -147,10 +146,11 @@ def on_press(key):
 
 my_point_cloud = myPointCloud()
 lidar = Lidar()
-rgb_cam = cv2.VideoCapture(1)
+rgb_cam = cv2.VideoCapture(0)
 
 # Glue the point cloud handler to the lidar frame callback
 lidar.setFrameCallback(my_point_cloud.handleFrame)
+lidar.streamDistance()
 
 # Make sure we can open the camera
 if not rgb_cam.isOpened():
@@ -165,9 +165,9 @@ CORS(webAPI, resources={r"/*": {"origins": "*"}})
 
 @webAPI.route("/points")
 def latestPointsAsPCD():
-    with tempfile.NamedTemporaryFile(suffix=".pcd") as vfile:
-        o3d.io.write_point_cloud(vfile.name, my_point_cloud.o3d_geometry, write_ascii=True)
-        return send_file(vfile.name)
+    foo = io.BytesIO(my_point_cloud.pcdBytes)
+    foo.seek(0)
+    return send_file(foo, download_name="foo")
 
 @webAPI.route("/")
 def serveHomepage():
