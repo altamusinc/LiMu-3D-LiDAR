@@ -26,6 +26,8 @@ function getLatestFile(){
         let dataview = new DataView(data);
         let buffer_length = dataview.buffer.byteLength;
 
+		let geometry = new THREE.BufferGeometry();
+
         let points = [];
         for (let i=0; i<buffer_length/2; i+=24){
             let x = dataview.getFloat64(i,true);
@@ -34,23 +36,22 @@ function getLatestFile(){
             points.push([x,y,z]);
         }
         points = points.flat();
-
-        let colors = [];
-        for (let i=buffer_length/2; i<buffer_length; i+=24){
-            let r = dataview.getFloat64(i,true);
-            let g = dataview.getFloat64(i+8,true);
-            let b = dataview.getFloat64(i+16,true);
-            colors.push([r,g,b]);
-        }
-        colors = colors.flat();
-
-		let geometry = new THREE.BufferGeometry();
 		geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(points),3));
-		geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(colors),3));
+
+        // let colors = [];
+        // for (let i=buffer_length/2; i<buffer_length; i+=24){
+        //     let r = dataview.getFloat64(i,true);
+        //     let g = dataview.getFloat64(i+8,true);
+        //     let b = dataview.getFloat64(i+16,true);
+        //     colors.push([r,g,b]);
+        // }
+        // colors = colors.flat();
+		// geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(colors),3));
+
         const material = new THREE.PointsMaterial( { size: 0.01, vertexColors: true } );
         let pointcloud = new THREE.Points( geometry, material );
         pointcloud.name = 'pointcloud';
-        // pointcloud.material.color.set(new THREE.Color(0x888888));
+        pointcloud.material.color.set(new THREE.Color(0x111111)); pointcloud.material.vertexColors = false;
         let old_pointclolud = scene.getObjectByName('pointcloud');
         scene.remove(old_pointclolud);
         scene.add(pointcloud);
