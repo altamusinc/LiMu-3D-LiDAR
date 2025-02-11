@@ -2,15 +2,35 @@ import limu_py
 import numpy as np
 import open3d as o3d
 import cv2
-import threading
-import time
 import io
-import tempfile
-from flask import Flask, send_file, send_from_directory, render_template
+import time
+from flask import Flask, send_file, send_from_directory, render_template, Response
 from pynput import keyboard
-import json_numpy
 from flask_cors import CORS
+from collections import deque
  
+class BoundedQueue:
+    def __init__(self, max_size):
+        self.queue = deque(maxlen=max_size)
+    
+    def put(self, item):
+        self.queue.append(item)
+    
+    def get(self):
+        if not self.is_empty():
+            return self.queue.popleft()
+        else:
+            return None
+
+    def is_empty(self):
+        return not self.queue
+    
+    def is_full(self):
+        return len(self.queue) == self.queue.maxlen
+
+    def size(self):
+        return len(self.queue)
+    
 class Lidar:
     lensType = 0
     frequencyModulation = 2
@@ -61,26 +81,24 @@ class myPointCloud:
     y_trans = 0
 
     color_from_cam = False
-    o3d_geometry = o3d.geometry.PointCloud()
-    np_points = np.zeros(6)
+    pcd_queue = BoundedQueue(3)
 
     frame_addresses = {}
     alert_callback = None
-
-    pcdBytes = bytes()
 
     def handleFrame(self, limu_frame):
         if id(limu_frame) not in self.frame_addresses:
             self.frame_addresses[id(limu_frame)] = limu_frame
             print(f"added frame at address {limu_frame}")
 
+        pcd = o3d.geometry.PointCloud()
         # convert the frame list to an np array, and reshape to 8 things wide
         xyz_rgb_np = np.array(limu_frame.get_xyz_rgb()).reshape(limu_frame.n_points, 8)
         xyz = xyz_rgb_np[:,:3]
-        self.np_points = xyz
-        self.o3d_geometry.points = o3d.utility.Vector3dVector(xyz)
+        pcd.points = o3d.utility.Vector3dVector(xyz)
 
         if self.color_from_cam:
+            t_start = time.perf_counter()
             global rgb_cam
             ret, cam_frame = rgb_cam.read()
             # cv2.imshow("frame", cam_frame)
@@ -89,20 +107,31 @@ class myPointCloud:
             cam_frame = cv2.flip(cam_frame, 1)
             cam_frame = self.remap_image(cam_frame)
             cam_frame = cam_frame.reshape(76800, 3) / 255
-            self.o3d_geometry.colors = o3d.utility.Vector3dVector(cam_frame)
+            pcd.colors = o3d.utility.Vector3dVector(cam_frame)
+            t_end = time.perf_counter()
+            # print(t_end - t_start)
         else:
-            self.o3d_geometry.paint_uniform_color([1, 0, 0])
-        #     rgb_float = np.array(xyz_rgb_np[:limu_frame.n_points,4])
-        #     rgb_int = rgb_float.view(np.uint8)
-        #     rgb = rgb_int.reshape(rgb_float.size, 8)
-        #     rgb = rgb[:,-3:]/255
-        #     self.o3d_geometry.colors = o3d.utility.Vector3dVector(rgb)
+            t_start = time.perf_counter()
+            rgb_float = np.array(xyz_rgb_np[:limu_frame.n_points,4])
+            rgb_int = rgb_float.view(np.uint8)
+            rgb = rgb_int.reshape(rgb_float.size, 8)
+            rgb = rgb[:,-3:]/255
+            pcd.colors = o3d.utility.Vector3dVector(rgb)
+            t_end = time.perf_counter()
+            # print(t_end - t_start)
 
-        self.o3d_geometry = self.o3d_geometry.remove_non_finite_points()
-        self.pcdBytes = o3d.io.write_point_cloud_to_bytes(self.o3d_geometry,format='mem::xyz', write_ascii=False)
+        pcd = pcd.remove_non_finite_points()
+        self.pcd_queue.put(pcd)
         
         if self.alert_callback is not None:
             self.alert_callback()
+
+    def get_latest_pcd(self) -> o3d.geometry.PointCloud:
+        pcd = self.pcd_queue.get()
+        # If the queue is empty, put the latest cloud back so other clients can access it.
+        if self.pcd_queue.is_empty():
+            self.pcd_queue.put(pcd)        
+        return pcd
 
     def remap_image(self, src):
         map_x = np.zeros((src.shape[0], src.shape[1]), dtype=np.float32)
@@ -168,6 +197,17 @@ def latestPointsAsPCD():
     foo = io.BytesIO(my_point_cloud.pcdBytes)
     foo.seek(0)
     return send_file(foo, download_name="foo")
+
+@webAPI.route("/asbytes")
+def lastestPointsAsBytes():
+    pcd = my_point_cloud.get_latest_pcd()
+    points = np.asarray(pcd.points).astype('float32')
+    colors = np.asarray(pcd.colors) * 255
+    colors = colors.astype('uint8')
+    points_b = points.tobytes()
+    colors_b = colors.tobytes()
+    combined = points_b + colors_b
+    return Response(combined, mimetype="application/octet-stream")
 
 @webAPI.route("/")
 def serveHomepage():
