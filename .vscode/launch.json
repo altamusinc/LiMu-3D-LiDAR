@@ -11,7 +11,7 @@
             "request": "launch",
             "module": "flask",
             "env": {
-                "FLASK_APP": "driver/python/src/test.py",
+                "FLASK_APP": "web/test.py",
                 "FLASK_DEBUG": "1"
             },
             "args": [

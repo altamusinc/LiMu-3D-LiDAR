@@ -47,12 +47,16 @@ PYBIND11_MODULE(limu_py, m) {
         .def_readwrite("n_points", &Frame::n_points)
         .def_readwrite("data_depth_ptr", &Frame::data_depth)
         .def_readwrite("data_grayscale_ptr", &Frame::data_grayscale)
-        .def_readwrite("data_amplitude_ptr", &Frame::data_amplitude)
         .def_readwrite("data_2d_bgr_ptr", &Frame::data_2d_bgr)
         .def_readwrite("saturated_mask_ptr", &Frame::saturated_mask)
         .def("get_xyz_rgb", [](Frame &frame) {
             auto vecsize = frame.n_points * 8;
             std::vector<float> vec {frame.data_3d_xyz_rgb, frame.data_3d_xyz_rgb + vecsize};
+            return vec;
+        })
+        .def("get_amplitude_data", [](Frame &frame) {
+            auto vecsize = frame.n_points;
+            std::vector<float> vec {frame.data_amplitude, frame.data_amplitude + vecsize};
             return vec;
         })
         ;

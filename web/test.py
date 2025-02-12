@@ -40,7 +40,7 @@ class Lidar:
         self._lens_type = 0  
         self._frequency_modulation = 2
         self._channel = 0
-        self._image_type = 1
+        self._image_type = 2
         self._hdr_mode = 2
         self._integration_time_tof_1 = 50
         self._integration_time_tof_2 = 400
@@ -249,25 +249,23 @@ class Lidar:
                 res = False
         return res
 
-    def to_json(self) -> str:
-        attr_dict = {"lens_type": self.lens_type,
-                     "frequency_modulation": self.frequency_modulation,
-                     "channel": self.channel,
-                     "image_type": self.image_type,
-                     "hdr_mode": self.hdr_mode,
-                     "integration_time_tof_1": self.integration_time_tof_1,
-                     "integration_time_tof_2": self.integration_time_tof_2,
-                     "integration_time_tof_3": self.integration_time_tof_3,
-                     "integration_time_tof_Gr": self.integration_time_tof_Gr,
-                     "min_amplitude": self.min_amplitude,
-                     "lens_center_offset_x": self.lens_center_offset_x,
-                     "lens_center_offset_y": self.lens_center_offset_y,
-                     "roi_left_x": self.roi_left_x,
-                     "roi_right_x": self.roi_right_x,
-                     "roi_top_y": self.roi_top_y,
-                     "roi_bottom_y": self.roi_bottom_y,
-                     }
-        return json.dumps(attr_dict)
+    def settings_as_dict(self) -> dict:
+        return {"lens_type": self.lens_type,
+                "frequency_modulation": self.frequency_modulation,
+                "channel": self.channel,
+                "image_type": self.image_type,
+                "hdr_mode": self.hdr_mode,
+                "integration_time_tof_1": self.integration_time_tof_1,
+                "integration_time_tof_2": self.integration_time_tof_2,
+                "integration_time_tof_3": self.integration_time_tof_3,
+                "integration_time_tof_Gr": self.integration_time_tof_Gr,
+                "min_amplitude": self.min_amplitude,
+                "lens_center_offset_x": self.lens_center_offset_x,
+                "lens_center_offset_y": self.lens_center_offset_y,
+                "roi_left_x": self.roi_left_x,
+                "roi_right_x": self.roi_right_x,
+                "roi_top_y": self.roi_top_y,
+                "roi_bottom_y": self.roi_bottom_y}
 
     def streamDistance(self):
         self.image_type = 1
@@ -287,7 +285,7 @@ class myPointCloud:
     cam_y_trans = 0
     _cam_remap_map = ()
 
-    color_from_cam = False
+    point_color = 2
     last_frame_time = time.perf_counter()
 
     pcd_queue = BoundedQueue(3)
@@ -297,6 +295,15 @@ class myPointCloud:
 
     def __init__(self):
         self._generate_remap_map()
+    
+    def settings_as_dict(self) -> dict:
+        return {"point_color": self.point_color,
+                "cam_x_scale": float(self.cam_x_scale),
+                "cam_y_trans": float(self.cam_y_scale),
+                "cam_x_trans": float(self.cam_x_trans),
+                "cam_y_trans": float(self.cam_y_trans),
+                }
+
 
     def handleFrame(self, limu_frame):
         print(f'Frame Received FPS: {1 / (time.perf_counter() - self.last_frame_time):.2f}')
@@ -309,32 +316,44 @@ class myPointCloud:
 
         pcd = o3d.geometry.PointCloud()
         # convert the frame list to an np array, and reshape to 8 things wide
-        xyz_rgb_np = np.array(limu_frame.get_xyz_rgb()).reshape(limu_frame.n_points, 8)
+        xyz_rgb_np = np.array(limu_frame.get_xyz_rgb(), dtype=np.float32).reshape(limu_frame.n_points, 8)
         xyz = xyz_rgb_np[:,:3]
         pcd.points = o3d.utility.Vector3dVector(xyz)
 
-        if self.color_from_cam:
-            t_start = time.perf_counter()
-            global rgb_cam
-            ret, cam_frame = rgb_cam.read()
-            # cv2.imshow("frame", cam_frame)
-            cam_frame = cv2.cvtColor(cam_frame, cv2.COLOR_BGR2RGB)
-            cam_frame = cv2.resize(cam_frame, (320, 240), interpolation=cv2.INTER_AREA)
-            cam_frame = cv2.flip(cam_frame, 1)
-            cam_frame = cv2.remap(cam_frame, self._cam_remap_map[0], self._cam_remap_map[1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=0)
-            cam_frame = cam_frame.reshape(76800, 3) / 255   
-            pcd.colors = o3d.utility.Vector3dVector(cam_frame)
-            t_end = time.perf_counter()
-            # print(t_end - t_start)
-        else:
-            t_start = time.perf_counter()
-            rgb_float = np.array(xyz_rgb_np[:limu_frame.n_points,4])
-            rgb_int = rgb_float.view(np.uint8)
-            rgb = rgb_int.reshape(rgb_float.size, 8)
-            rgb = rgb[:,-3:]/255
-            pcd.colors = o3d.utility.Vector3dVector(rgb)
-            t_end = time.perf_counter()
-            # print(t_end - t_start)
+        match self.point_color:
+            case 0:
+                # Webcam
+                t_start = time.perf_counter()
+                global rgb_cam
+                ret, cam_frame = rgb_cam.read()
+                # cv2.imshow("frame", cam_frame)
+                cam_frame = cv2.cvtColor(cam_frame, cv2.COLOR_BGR2RGB)
+                cam_frame = cv2.resize(
+                    cam_frame, (320, 240), interpolation=cv2.INTER_AREA)
+                cam_frame = cv2.flip(cam_frame, 1)
+                cam_frame = cv2.remap(
+                    cam_frame, self._cam_remap_map[0], self._cam_remap_map[1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=0)
+                cam_frame = cam_frame.reshape(76800, 3) / 255
+                pcd.colors = o3d.utility.Vector3dVector(cam_frame)
+                t_end = time.perf_counter()
+                # print(t_end - t_start)
+            case 1:
+                # Distance
+                t_start = time.perf_counter()
+                rgb = np.array(xyz_rgb_np[:limu_frame.n_points, 4])
+                rgb = np.frombuffer(rgb.tobytes(), dtype=np.uint8)
+                rgb = rgb.reshape(limu_frame.n_points, 4)
+                rgb = rgb[:,:3]
+                rgb = rgb[:,::-1]
+                rgb = rgb.astype("float32")
+                pcd.colors = o3d.utility.Vector3dVector(rgb / 255)
+                t_end = time.perf_counter()
+                # print(t_end - t_start)
+            case 2:
+                # Amplitude
+                t_start = time.perf_counter()
+                amplitude = np.array(limu_frame.get_amplitude_data(), dtype=np.float32)
+                foo = ""
 
         pcd = pcd.remove_non_finite_points()
         self.pcd_queue.put(pcd)
@@ -344,7 +363,7 @@ class myPointCloud:
             self.alert_callback()
 
         t_end = time.perf_counter()
-        # print(f"Frame Process Time: {(t_end - t_start) * 1000:.1f} ms")
+        print(f"Frame Process Time: {(t_end - t_start) * 1000:.1f} ms")
 
     def get_latest_pcd(self) -> o3d.geometry.PointCloud:
         pcd = self.pcd_queue.get()
@@ -377,7 +396,7 @@ class myPointCloud:
 
 my_point_cloud = myPointCloud()
 lidar = Lidar()
-rgb_cam = cv2.VideoCapture(1)
+rgb_cam = cv2.VideoCapture(0)
 
 # Glue the point cloud handler to the lidar frame callback
 lidar.setFrameCallback(my_point_cloud.handleFrame)
@@ -388,7 +407,7 @@ if not rgb_cam.isOpened():
     print("Error: Could not open camera.")
     exit()
 
-webAPI = Flask(__name__)
+webAPI = Flask(__name__, template_folder="./")
 CORS(webAPI, resources={r"/*": {"origins": "*"}})
 
 @webAPI.route("/points")
@@ -417,7 +436,7 @@ def serveHomepage():
 
 @webAPI.route("/<path:filename>")
 def serveFile(filename):
-    return send_from_directory("./web", filename)
+    return send_from_directory("./", filename)
 
 @webAPI.route("/api/on", methods = ['POST'])
 def turnOnLidar():
@@ -438,13 +457,28 @@ def webcamColor():
 def applySettings():
     print(request.data)
     if lidar.update_settings_from_json(request.data):
-        return lidar.to_json()
+        d = lidar.settings_as_dict()
+        d.update(my_point_cloud.settings_as_dict())
+        return Response(json.dumps(d), mimetype="application/json")
     else:
         return "Error"
 
+@webAPI.route("/displaySettings", methods=['POST'])
+def displaySettings():
+    print(request.data)
+    display_settings = json.loads(request.data)
+    if "point_color" in display_settings:
+        print("setting point color")
+        my_point_cloud.point_color = display_settings["point_color"]
+    d = lidar.settings_as_dict()
+    d.update(my_point_cloud.settings_as_dict())
+    return Response(json.dumps(d), mimetype="application/json")
+
 @webAPI.route("/currentSettings")
 def sendCurrentSettings():
-    return Response(lidar.to_json(), mimetype="application/json")
+    d = lidar.settings_as_dict()
+    d.update(my_point_cloud.settings_as_dict())
+    return Response(json.dumps(d), mimetype="application/json")
 
 @webAPI.route("/api/color_default", methods = ['POST'])
 def defaultColor():
