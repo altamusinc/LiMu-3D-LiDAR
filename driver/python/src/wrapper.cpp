@@ -14,7 +14,7 @@ PYBIND11_MODULE(limu_py, m) {
         .def("streamDCS", &ToF::streamDCS)
         .def("streamGrayscale", &ToF::streamGrayscale)
         .def("streamDistance", &ToF::streamDistance)
-        .def("stremDistanceAmplitude", &ToF::streamDistanceAmplitude)
+        .def("streamDistanceAmplitude", &ToF::streamDistanceAmplitude)
         .def("setOffset", &ToF::setOffset)
         .def("setMinAmplitude", &ToF::setMinAmplitude)
         .def("setBinning", &ToF::setBinning)
