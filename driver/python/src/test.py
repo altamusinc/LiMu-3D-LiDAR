@@ -5,7 +5,7 @@ import cv2
 import io
 import time
 import json
-from flask import Flask, send_file, send_from_directory, render_template, Response
+from flask import Flask, request, send_file, send_from_directory, render_template, Response
 from pynput import keyboard
 from flask_cors import CORS
 from collections import deque
@@ -34,74 +34,251 @@ class BoundedQueue:
     
 class Lidar:
 
-    settings = {"lens_type": 0,
-                "frequency_modulation": 2,
-                "channel": 0,
-                "image_type": 1,
-                "hdr_mode": 2,
-                "integration_time_tof_1": 50,
-                "integration_time_tof_2": 400,
-                "integration_time_tof_3": 4000,
-                "integration_time_tof_Gr": 10000,
-                "min_amplitude": 60,
-                "lens_center_offset_x": 0,
-                "lens_center_offset_y": 0,
-                "roi_left_x": 0,
-                "roi_right_x": 319,
-                "roi_top_y": 0,
-                "roi_bottom_y": 319,
-                "roi_height": 0,
-                }
-
     def __init__(self):
         print("connecting to LIMU")
         self.tof = limu_py.ToF.tof320("10.10.31.180", "50660")
-        self.applySettings()
+        self._lens_type = 0  
+        self._frequency_modulation = 2
+        self._channel = 0
+        self._image_type = 1
+        self._hdr_mode = 2
+        self._integration_time_tof_1 = 50
+        self._integration_time_tof_2 = 400
+        self._integration_time_tof_3 = 4000
+        self._integration_time_tof_Gr = 10000
+        self._min_amplitude = 60
+        self._lens_center_offset_x = 0
+        self._lens_center_offset_y = 0
+        self._roi_left_x = 0
+        self._roi_right_x = 319
+        self._roi_top_y = 0
+        self._roi_bottom_y = 239
+        self.apply_all_settings()
+
+    @property
+    def lens_type(self):
+        return self._lens_type
+    
+    @lens_type.setter
+    def lens_type(self, val):
+        self._lens_type = val
+        print(f"Setting Lens Type to {val}")
+        self.tof.setLensType(val)
+
+    @property
+    def frequency_modulation(self):
+        return self._frequency_modulation
+    
+    @frequency_modulation.setter
+    def frequency_modulation(self, val):
+        self._frequency_modulation = val
+        self.apply_modulation_and_channel_settings()
+    
+    @property
+    def channel(self):
+        return self._channel
+
+    @channel.setter
+    def channel(self, val):
+        self._channel = val
+        self.apply_modulation_and_channel_settings()
+    
+    @property
+    def hdr_mode(self):
+        return self._hdr_mode
+    
+    @hdr_mode.setter
+    def hdr_mode(self, val):
+        self._hdr_mode = val
+        print(f"Setting HDR Mode to {val}")
+        self.tof.setHDRMode(val)
+
+    @property
+    def integration_time_tof_1(self):
+        return self._integration_time_tof_1
+    
+    @integration_time_tof_1.setter
+    def integration_time_tof_1(self, val):
+        self._integration_time_tof_1 = val
+        self.apply_integration_time_settings()
+
+    @property
+    def integration_time_tof_2(self):
+        return self._integration_time_tof_2
+    
+    @integration_time_tof_2.setter
+    def integration_time_tof_2(self, val):
+        self._integration_time_tof_2 = val
+        self.apply_integration_time_settings()
+
+    @property
+    def integration_time_tof_3(self):
+        return self._integration_time_tof_3
+    
+    @integration_time_tof_3.setter
+    def integration_time_tof_3(self, val):
+        self._integration_time_tof_3 = val
+        self.apply_integration_time_settings()
+    
+    @property
+    def integration_time_tof_Gr(self):
+        return self._integration_time_tof_Gr
+    
+    @integration_time_tof_Gr.setter
+    def integration_time_tof_Gr(self, val):
+        self._integration_time_tof_Gr = val
+        self.apply_integration_time_settings()
+
+    @property
+    def min_amplitude(self):
+        return self._min_amplitude
+    
+    @min_amplitude.setter
+    def min_amplitude(self, val):
+        self._min_amplitude = val
+        print(f"Setting Min Amplitude to {val}")
+        self.tof.setMinAmplitude(val)
+
+    @property
+    def lens_center_offset_x(self):
+        return self._lens_center_offset_x
+
+    @lens_center_offset_x.setter
+    def lens_center_offset_x(self, val):
+        self._lens_center_offset_x = val
+        self.apply_lens_offset_settings()
+
+    @property
+    def lens_center_offset_y(self):
+        return self._lens_center_offset_y
+
+    @lens_center_offset_y.setter
+    def lens_center_offset_y(self, val):
+        self._lens_center_offset_y = val
+        self.apply_lens_offset_settings()
+
+    @property
+    def roi_left_x(self):
+        return self._roi_left_x
+
+    @roi_left_x.setter
+    def roi_left_x(self, val):
+        self._roi_left_x = val
+        self.apply_roi_settings()
+
+    @property
+    def roi_right_x(self):
+        return self._roi_right_x
+
+    @roi_right_x.setter
+    def roi_right_x(self, val):
+        self._roi_right_x = val
+        self.apply_roi_settings()
+
+    @property
+    def roi_top_y(self):
+        return self._roi_top_y
+
+    @roi_top_y.setter
+    def roi_top_y(self, val):
+        self._roi_top_y = val
+        self.apply_roi_settings()
+
+    @property
+    def roi_bottom_y(self):
+        return self._roi_bottom_y
+
+    @roi_bottom_y.setter
+    def roi_bottom_y(self, val):
+        self._roi_bottom_y = val
+        self.apply_roi_settings()
+
+    @property
+    def image_type(self):
+        return self._image_type
+
+    @image_type.setter
+    def image_type(self, val):
+        self._image_type = val
+        match val:
+            case 0:
+                print("Stopping Stream")
+                self.tof.stopStream()
+            case 1:
+                print("Streaming Distance")
+                self.tof.streamDistance()
+            case 2:
+                print("Streaming Distance/Amplitude")
+                self.tof.streamDistanceAmplitude()
+
+    def apply_roi_settings(self):
+        self.tof.setRoi(self.roi_left_x, self.roi_top_y, self.roi_right_x, self.roi_bottom_y)
+
+    def apply_modulation_and_channel_settings(self):
+        print(f"Setting modulation to {self.frequency_modulation} and channel to {self.channel}")
+        self.tof.setModulation(self.frequency_modulation, self.channel)
+
+    def apply_integration_time_settings(self):
+        print(f"Applying Integration Times: 1: {self.integration_time_tof_1} 2: {self.integration_time_tof_2} 3: {self.integration_time_tof_3} GR: {self.integration_time_tof_Gr}")
+        self.tof.setIntegrationTime(self.integration_time_tof_1, self.integration_time_tof_2, self.integration_time_tof_3, self.integration_time_tof_Gr)
+
+    def apply_lens_offset_settings(self):
+        print(f"Applying Lens offset X: {self.lens_center_offset_x} Y: {self.lens_center_offset_y}")
+        self.tof.setLensCenter(self.lens_center_offset_x, self.lens_center_offset_y)
+
+    def apply_all_settings(self):
+        self.apply_modulation_and_channel_settings()
+        self.min_amplitude = self.min_amplitude
+        self.apply_integration_time_settings()
+        self.hdr_mode = self.hdr_mode
+        self.apply_roi_settings()
+        self.lens_type = self.lens_type
+        self.apply_lens_offset_settings()
+        self.tof.setFilter(0, 0, 0, 0, 0, 0, 0, 0, 0)
+        self.image_type = self.image_type
 
     def update_settings_from_json(self, settings_json):
+        res: bool = True
         new_settings_dict: dict = json.loads(settings_json)
-        print(new_settings_dict)
-        toApply: bool = False
         for key, value in new_settings_dict.items():
-            print(f"{key} : {value}") 
-            if key in self.settings and value != self.settings[key]:
-                self.settings[key] = value
-                toApply = True
-        if toApply:
-            self.applySettings()
+            if hasattr(self, key):
+                if getattr(self, key) != value:
+                    setattr(self, key, value)
+            else:
+                print(f"I don't have an attribute named {key}")
+                res = False
+        return res
 
-    def send_settings_as_json(self) -> str:
-        return json.dumps(self.settings)
+    def to_json(self) -> str:
+        attr_dict = {"lens_type": self.lens_type,
+                     "frequency_modulation": self.frequency_modulation,
+                     "channel": self.channel,
+                     "image_type": self.image_type,
+                     "hdr_mode": self.hdr_mode,
+                     "integration_time_tof_1": self.integration_time_tof_1,
+                     "integration_time_tof_2": self.integration_time_tof_2,
+                     "integration_time_tof_3": self.integration_time_tof_3,
+                     "integration_time_tof_Gr": self.integration_time_tof_Gr,
+                     "min_amplitude": self.min_amplitude,
+                     "lens_center_offset_x": self.lens_center_offset_x,
+                     "lens_center_offset_y": self.lens_center_offset_y,
+                     "roi_left_x": self.roi_left_x,
+                     "roi_right_x": self.roi_right_x,
+                     "roi_top_y": self.roi_top_y,
+                     "roi_bottom_y": self.roi_bottom_y,
+                     }
+        return json.dumps(attr_dict)
 
     def streamDistance(self):
-        self.settings["image_type"] = 1
-        self.tof.streamDistance()
+        self.image_type = 1
         print("Starting Stream Distance")
 
     def streamStop(self):
-        self.settings["image_type"] = 0
-        self.tof.stopStream()
+        self.image_type = 0
         print("Stopping Stream")
 
     def setFrameCallback(self, callback):
         self.tof.subscribeFrame(callback)
-
-    def applySettings(self):
-        self.tof.setModulation(self.settings["frequency_modulation"], self.settings["channel"])
-        self.tof.setMinAmplitude(self.settings["min_amplitude"])
-        self.tof.setIntegrationTime(self.settings["integration_time_tof_1"], self.settings["integration_time_tof_2"], self.settings["integration_time_tof_3"], self.settings["integration_time_tof_Gr"])
-        self.tof.setHDRMode(self.settings["hdr_mode"])
-        self.tof.setRoi(self.settings["roi_left_x"], self.settings["roi_top_y"], self.settings["roi_right_x"], self.settings["roi_bottom_y"])
-        self.tof.setLensType(self.settings["lens_type"])
-        self.tof.setLensCenter(self.settings["lens_center_offset_x"], self.settings["lens_center_offset_y"])
-        self.tof.setFilter(0, 0, 0, 0, 0, 0, 0, 0, 0)
-        match self.settings["image_type"]:
-            case 0:
-                self.tof.stopStream()
-            case 1:
-                self.tof.streamDistance()
-            case 2:
-                self.tof.streamDistanceAmplitude()
 
 class myPointCloud:
     cam_x_scale = 1
@@ -145,7 +322,7 @@ class myPointCloud:
             cam_frame = cv2.resize(cam_frame, (320, 240), interpolation=cv2.INTER_AREA)
             cam_frame = cv2.flip(cam_frame, 1)
             cam_frame = cv2.remap(cam_frame, self._cam_remap_map[0], self._cam_remap_map[1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=0)
-            cam_frame = cam_frame.reshape(76800, 3) / 255
+            cam_frame = cam_frame.reshape(76800, 3) / 255   
             pcd.colors = o3d.utility.Vector3dVector(cam_frame)
             t_end = time.perf_counter()
             # print(t_end - t_start)
@@ -167,7 +344,7 @@ class myPointCloud:
             self.alert_callback()
 
         t_end = time.perf_counter()
-        print(f"Frame Process Time: {(t_end - t_start) * 1000:.1f} ms")
+        # print(f"Frame Process Time: {(t_end - t_start) * 1000:.1f} ms")
 
     def get_latest_pcd(self) -> o3d.geometry.PointCloud:
         pcd = self.pcd_queue.get()
@@ -200,11 +377,11 @@ class myPointCloud:
 
 my_point_cloud = myPointCloud()
 lidar = Lidar()
-rgb_cam = cv2.VideoCapture(0)
+rgb_cam = cv2.VideoCapture(1)
 
 # Glue the point cloud handler to the lidar frame callback
 lidar.setFrameCallback(my_point_cloud.handleFrame)
-lidar.streamDistance()
+# lidar.streamDistance()
 
 # Make sure we can open the camera
 if not rgb_cam.isOpened():
@@ -257,9 +434,17 @@ def webcamColor():
     my_point_cloud.color_from_cam = True
     return "1"
 
+@webAPI.route("/applySettings", methods=['POST'])
+def applySettings():
+    print(request.data)
+    if lidar.update_settings_from_json(request.data):
+        return lidar.to_json()
+    else:
+        return "Error"
+
 @webAPI.route("/currentSettings")
 def sendCurrentSettings():
-    return Response(lidar.send_settings_as_json(), mimetype="application/json")
+    return Response(lidar.to_json(), mimetype="application/json")
 
 @webAPI.route("/api/color_default", methods = ['POST'])
 def defaultColor():
