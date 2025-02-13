@@ -8,6 +8,7 @@ import json
 from flask import Flask, request, send_file, send_from_directory, render_template, Response
 from flask_cors import CORS
 from collections import deque
+import matplotlib.pyplot as plt
 
 class BoundedQueue:
     def __init__(self, max_size):
@@ -312,11 +313,10 @@ class myPointCloud:
             self.frame_addresses[id(limu_frame)] = limu_frame
             print(f"added frame at address {limu_frame}")
 
-        pcd = o3d.geometry.PointCloud()
         # convert the frame list to an np array, and reshape to 8 things wide
         xyz_rgb_np = np.array(limu_frame.get_xyz_rgb(), dtype=np.float32).reshape(limu_frame.n_points, 8)
         xyz = xyz_rgb_np[:,:3]
-        pcd.points = o3d.utility.Vector3dVector(xyz)
+        colors = []
 
         match self.point_color:
             case 0:
@@ -332,7 +332,7 @@ class myPointCloud:
                 cam_frame = cv2.remap(
                     cam_frame, self._cam_remap_map[0], self._cam_remap_map[1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=0)
                 cam_frame = cam_frame.reshape(76800, 3) / 255
-                pcd.colors = o3d.utility.Vector3dVector(cam_frame)
+                colors = cam_frame
                 t_end = time.perf_counter()
                 # print(t_end - t_start)
             case 1:
@@ -344,7 +344,7 @@ class myPointCloud:
                 rgb = rgb[:,:3] # The first byte is unused, float is 4 bytes, we only have r/g/b
                 rgb = rgb[:,::-1] # They come in reversed, so flip it around to be rgb instead of bgr
                 rgb = rgb.astype("float32") # o3d wants colors as 0-1 floats, convert our 0-255 values to float
-                pcd.colors = o3d.utility.Vector3dVector(rgb / 255) # divide to normalize to 0.0-1.0
+                colors = rgb / 255
                 t_end = time.perf_counter()
                 # print(t_end - t_start)
             case 2:
@@ -352,7 +352,25 @@ class myPointCloud:
                 t_start = time.perf_counter()
                 amplitude = np.array(limu_frame.get_amplitude_data(), dtype=np.float32)
                 foo = ""
+            case 3 | 4 | 5:
+                # Color by x y or z
+                i = None
+                match self.point_color:
+                    # Z
+                    case 3:
+                        i = xyz[:,2] # slice off z from xyz points
+                    case 4:
+                        i = xyz[:,1] # slice off y 
+                    case 5:
+                        i = xyz[:,0]
+                            
+                norm = plt.Normalize(np.nanmin(i), np.nanmax(i))
+                cmap = plt.get_cmap("coolwarm")
+                colors = cmap(norm(i))[:,0:3]
 
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(xyz)
+        pcd.colors = o3d.utility.Vector3dVector(colors)
         pcd = pcd.remove_non_finite_points()
         self.pcd_queue.put(pcd)
 
