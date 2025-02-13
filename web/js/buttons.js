@@ -124,6 +124,9 @@ function helios_settings(data) {
 								<option value="0">Camera</option>\
 								<option value="1">Distance</option>\
 								<option value="2">Amplitude</option>\
+								<option value="3">X</option>\
+								<option value="4">Y</option>\
+								<option value="5">Z</option>\
 							</select>\
 						</div>\
 					</td>\
@@ -247,10 +250,8 @@ function helios_settings(data) {
 	if(typeof object != 'undefined'){size = object.material.size;}
 	$( "#point_size_range" ).slider( "option", "values",  [size] );
 	$("#point_size").val(size).off().on('change', function(){
-		console.log('test');
 		let size = $("#point_size").val();
 		let object = scene.getObjectByName('pointcloud');
-		console.log(size);
 		object.material.size = size;
 	});
 	$("#frame_rate").val(Math.round(1000*1/frame_time)).off().on('change', function(){
