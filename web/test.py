@@ -33,14 +33,13 @@ class BoundedQueue:
         return len(self.queue)
     
 class Lidar:
-
     def __init__(self):
         print("connecting to LIMU")
         self.tof = limu_py.ToF.tof320("10.10.31.180", "50660")
         self._lens_type = 0  
         self._frequency_modulation = 2
         self._channel = 0
-        self._image_type = 2
+        self._image_type = 1
         self._hdr_mode = 2
         self._integration_time_tof_1 = 50
         self._integration_time_tof_2 = 400
@@ -285,7 +284,7 @@ class myPointCloud:
     cam_y_trans = 0
     _cam_remap_map = ()
 
-    point_color = 2
+    point_color = 0
     last_frame_time = time.perf_counter()
 
     pcd_queue = BoundedQueue(3)
@@ -340,13 +339,13 @@ class myPointCloud:
             case 1:
                 # Distance
                 t_start = time.perf_counter()
-                rgb = np.array(xyz_rgb_np[:limu_frame.n_points, 4])
-                rgb = np.frombuffer(rgb.tobytes(), dtype=np.uint8)
-                rgb = rgb.reshape(limu_frame.n_points, 4)
-                rgb = rgb[:,:3]
-                rgb = rgb[:,::-1]
-                rgb = rgb.astype("float32")
-                pcd.colors = o3d.utility.Vector3dVector(rgb / 255)
+                rgb = np.array(xyz_rgb_np[:limu_frame.n_points, 4]) # get the combined RGB float from the 5th byte of the xyz_rgb array
+                rgb = np.frombuffer(rgb.tobytes(), dtype=np.uint8) # Convert it to a big ol list of uint8 bytes
+                rgb = rgb.reshape(limu_frame.n_points, 4) # Reshape it back into 2d array matching the points array
+                rgb = rgb[:,:3] # The first byte is unused, float is 4 bytes, we only have r/g/b
+                rgb = rgb[:,::-1] # They come in reversed, so flip it around to be rgb instead of bgr
+                rgb = rgb.astype("float32") # o3d wants colors as 0-1 floats, convert our 0-255 values to float
+                pcd.colors = o3d.utility.Vector3dVector(rgb / 255) # divide to normalize to 0.0-1.0
                 t_end = time.perf_counter()
                 # print(t_end - t_start)
             case 2:
