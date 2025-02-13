@@ -6,7 +6,6 @@ import io
 import time
 import json
 from flask import Flask, request, send_file, send_from_directory, render_template, Response
-from pynput import keyboard
 from flask_cors import CORS
 from collections import deque
 

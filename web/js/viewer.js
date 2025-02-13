@@ -88,7 +88,7 @@ function getLatestFile(){
     }
 
     
-    $.ajax({url: 'http://wdueease-puget:5000/asbytes', method: "GET", xhrFields: {responseType: "arraybuffer"}, success, error});
+    $.ajax({url: '/asbytes', method: "GET", xhrFields: {responseType: "arraybuffer"}, success, error});
 }
 
 function animate() {

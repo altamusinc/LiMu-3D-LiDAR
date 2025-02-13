@@ -7,7 +7,7 @@ function helios_settings_dialog(){
 	if($('#'+id).length){$('#'+id).dialog('destroy').remove();}
 	$('<div style="padding:20px;"></div>').attr('id', id).appendTo( 'body' );
 
-    $.ajax({url: 'http://wdueease-puget:5000/currentSettings', method: "GET", dataType:'json', success: function(data){helios_settings(data);}});
+    $.ajax({url: '/currentSettings', method: "GET", dataType:'json', success: function(data){helios_settings(data);}});
 
 	var width = 800; var height = 600; var show = null; var hide = null;
 	var position = [($(window).width()-width)/2,($(window).height()-height)/2]; 
@@ -223,7 +223,7 @@ function helios_settings(data) {
 		let json = {}; json[name] = val; json = JSON.stringify(json);
 		clearTimeout(post_timeout);
 		post_timeout = setTimeout(function(){
-			$.ajax({ type: 'POST', url: 'http://wdueease-puget:5000/applySettings', data: json, contentType: "application/json; charset=utf-8", success: function(data){
+			$.ajax({ type: 'POST', url: '/applySettings', data: json, contentType: "application/json; charset=utf-8", success: function(data){
 				data = JSON.parse(data);
 				helios_settings(data);
 			}});
@@ -235,7 +235,7 @@ function helios_settings(data) {
 		let json = {}; json[name] = val; json = JSON.stringify(json);
 		clearTimeout(post_timeout);
 		post_timeout = setTimeout(function(){
-			$.ajax({ type: 'POST', url: 'http://wdueease-puget:5000/displaySettings', data: json, contentType: "application/json; charset=utf-8", success: function(data){
+			$.ajax({ type: 'POST', url: '/displaySettings', data: json, contentType: "application/json; charset=utf-8", success: function(data){
 				data = JSON.parse(data);
 				helios_settings(data);
 			}});

@@ -4,3 +4,4 @@ numpy
 open3d
 opencv-python
 keyboard
+flask_cors
