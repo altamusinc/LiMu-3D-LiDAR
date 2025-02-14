@@ -38,7 +38,7 @@ function initialize_canvas() {
 	const innerWidth = $(canvas).innerWidth();
 	const innerHeight = $(canvas).innerHeight();
 	
-	tjs.renderer = new THREE.WebGLRenderer({antialias: true});
+	tjs.renderer = new THREE.WebGLRenderer({antialias: true, alpha: true});
 	// renderer.setPixelRatio(window.devicePixelRatio);
 	tjs.renderer.setSize( innerWidth, innerHeight );
 	tjs.renderer.setClearColor(new THREE.Color(0xffffff), 0);
