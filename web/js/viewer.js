@@ -10,17 +10,23 @@ let frame_time = 111;
 
 function buttons(tjs){
 
-    $('.helios_settings').on('click', function(){
-        helios_settings(tjs);
-    });
+    $('.helios_settings').on('click', function(){helios_settings(tjs);});
     
-    $(document).on('keydown', null, 'ctrl+space', function(){
+    $(document).on('keydown', null, 'ctrl+space', function(){toggle_pause(tjs);});    
+    $(document).on('keydown', null, 'm', function(){m_pressed = true;});
+    $(document).on('keyup', null, 'm', function(){m_pressed = false;});    
+    $(document).on('keydown', null, 'esc', function(){remove_measurements(tjs)});
+    $(document).on('keydown', null, 'del', function(){remove_measurements(tjs)});
+
+    function toggle_pause(tjs){
         if(!pause){ pause = true; }
         else{ pause = false; update_scene(tjs); }
-    });
-    
-    $(document).on('keydown', null, 'm', function(){m_pressed = true;});
-    $(document).on('keyup', null, 'm', function(){m_pressed = false;});
+    }
+    function remove_measurements(tjs){        
+        let remove_objects = [];
+        tjs.scene.traverse(function(object){if(object.name.indexOf('measurement')!=-1){remove_objects.push(object);}});
+        $.each(remove_objects, function(i,object){tjs.scene.remove(object);});
+    }
 
 }
 
@@ -131,13 +137,12 @@ function initialize_canvas() {
                     distanceLabel.position.set((x1+x2)/2,(y1+y2)/2,(z1+z2)/2);
                     distanceLabel.name = 'measurement';
                     tjs.scene.add(distanceLabel);
-                }
-                else{
-                    let remove_objects = [];
+
                     measure = [null,null];
-                    tjs.scene.traverse(function(object){if(object.name.indexOf('measurement')!=-1){remove_objects.push(object);}});
-                    $.each(remove_objects, function(i,object){tjs.scene.remove(object);});
                 }
+                // else{
+                //     measure = [null,null];
+                // }
                 mousedown = false;
             }
         }
