@@ -7,14 +7,7 @@ cmake ..
 
 make
 
-./set_camera_ip <current IP address> <new IP address>
+./set_camera_ip <sensor IP address> <new IP address> <image type: 0 - grayscale, 1 - distance, 2 - distance_amplitude>
 
-power off the Limu camera
-
-wait for a couple of minutes
-
-power on the camera
-
-use the <new IP address> to connect to the camera
 
 

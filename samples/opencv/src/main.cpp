@@ -19,9 +19,9 @@ int lensType = 0;  //0- wide field, 1- standard field, 2 - narrow field
 int old_lensType;
 int frequencyModulation = 2;
 int channel = 0;
-int imageType = 1; //image and aquisition type: 0 - grayscale, 1 - distance, 2 - distance_amplitude
+int imageType = 2; //image and aquisition type: 0 - grayscale, 1 - distance, 2 - distance_amplitude
 int hdr_mode = 2;
-int int0 = 50, int1 = 400, int2 = 4000, intGr = 10000;
+int int0 = 50, int1 = 400, int2 = 4000, intGr = 25000;
 int minAmplitude = 60;
 int lensCenterOffsetX = 0;
 int lensCenterOffsetY = 0;
@@ -49,6 +49,10 @@ void startStreaming()
     case Frame::AMPLITUDE:
         tof->streamDistanceAmplitude();
 		std::cout << "Start streaming distance-amplitude" << std::endl;
+        break;
+    case Frame::GRAYSCALE:
+        tof->streamGrayscale();
+		std::cout << "Start streaming grayscale" << std::endl;
         break;
     default:
         break;
@@ -83,12 +87,27 @@ void updateFrame(std::shared_ptr<Frame> frame)
     //std::vector<pcl::PointXYZRGB> pts(data_ptr, data_ptr + frame->n_points);
     //cloud->points.insert(cloud->points.end(), pts.begin(), pts.end());
 
-    cv::Mat depth_bgr(frame->height, frame->width, CV_8UC3, frame->data_2d_bgr);
-
-    cv::Mat mat_depth_bgr_flipped; 
-    cv::flip(depth_bgr, mat_depth_bgr_flipped, 1);
-    
-	cv::imshow("depth_bgr", depth_bgr);
+    if (imageType == 1 ||imageType == 2)
+    {
+        cv::Mat depth_bgr(frame->height, frame->width, CV_8UC3, frame->data_2d_bgr);
+        cv::flip(depth_bgr, depth_bgr, 1);    
+        cv::imshow("depth_bgr", depth_bgr);
+    }
+	
+    if (imageType == 2)
+    {
+        cv::Mat amplitude(frame->height, frame->width, CV_32F, frame->data_amplitude);
+        cv::normalize(amplitude, amplitude, 0, 255, cv::NORM_MINMAX, CV_8UC1);
+        cv::flip(amplitude, amplitude, 1);
+        cv::imshow("amplitude", amplitude);
+    }
+	
+    if (imageType == 0)
+    {
+        cv::Mat grayscale(frame->height, frame->width, CV_8UC1, frame->data_grayscale);
+        cv::flip(grayscale, grayscale, 1);
+        cv::imshow("grayscale", grayscale);
+    }
 
     n_frames ++;
 
@@ -115,13 +134,14 @@ int main(int argc, char** argv) {
 	sigaction(SIGINT, &sigIntHandler, NULL);
     
     std::string cur_ip = "10.10.31.180";
-    if (argc == 2)
+    if (argc >= 2)
     {
         cur_ip = std::string(argv[1]);
-    } else if (argc > 2)
+        imageType = std::stoi(argv[2]);
+    } else if (argc > 3)
     {
-        std::cout << "Usage:   ./demo <camera IP address>" << std::endl;
-        std::cout << "Example: ./demo 10.10.10.180" << std::endl;
+        std::cout << "Usage:   ./demo <camera IP address> <image type: 0 - grayscale, 1 - distance, 2 - distance_amplitude>" << std::endl;
+        std::cout << "Example: ./demo 10.10.10.180 1" << std::endl;
         return 1;
     }    
 

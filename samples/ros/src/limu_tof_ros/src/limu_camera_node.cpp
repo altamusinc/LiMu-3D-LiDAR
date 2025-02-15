@@ -280,10 +280,7 @@ void updateFrame(std::shared_ptr<Frame> frame)
     cloud->points.insert(cloud->points.end(), pts.begin(), pts.end());
 
     cv::Mat depth_bgr(frame->height, frame->width, CV_8UC3, frame->data_2d_bgr);
-    cv::Mat amplitude(frame->height, frame->width, CV_32F,  frame->data_amplitude);
-
-    cv::Mat mat_depth_bgr_flipped; 
-    cv::flip(depth_bgr, mat_depth_bgr_flipped, 1);
+    cv::flip(depth_bgr, depth_bgr, 1);
     
     ros::Time curTime = ros::Time::now();
 
@@ -300,10 +297,20 @@ void updateFrame(std::shared_ptr<Frame> frame)
     }
 
     cloud_publisher.publish(cloud);
-    publish_image(depth_Publisher, mat_depth_bgr_flipped, curTime);
+    publish_image(depth_Publisher, depth_bgr, curTime);    
+
     if (rgb_available)
     {
         publish_image(rgb_publisher, rgb_image, curTime);
+    }
+
+    if (imageType == Frame::AMPLITUDE)
+    {
+        cv::Mat amplitude(frame->height, frame->width, CV_32F,  frame->data_amplitude);
+        cv::normalize(amplitude, amplitude, 0, 255, cv::NORM_MINMAX, CV_8UC1);
+        cv::flip(amplitude, amplitude, 1);
+        cv::cvtColor(amplitude, amplitude, cv::COLOR_GRAY2BGR);
+        publish_image(amplitude_publisher, amplitude, curTime);
     }
 
     n_frames ++;
