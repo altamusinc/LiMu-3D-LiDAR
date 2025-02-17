@@ -123,3 +123,12 @@ usb-046d_Logitech_Webcam_C930e_986A01BE-video-index0
 ```
 ## Contact
 Contact us:  [info@vsemi.io](mailto:info@vsemi.io)
+
+## Altamus Install Details
+For ubuntu 24.04 to work the driver really wants libboost_thread.so.1.71.0 
+building this version this is annoying so we just symlink the 1.83.0 that gets installed with Ubuntu by default
+```
+sudo apt install libboost-thread-dev
+cd /usr/lib/x86_64-linux-gnu/
+sudo ln -s libboost_thread.so libboost_thread.so.1.71.0
+```

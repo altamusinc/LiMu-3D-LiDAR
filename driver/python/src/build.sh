@@ -1,0 +1,1 @@
+g++ -O3 -Wall -shared -std=c++11 -fPIC wrapper.cpp -o limu_py.so -I/usr/include/pybind11/ -I/usr/include/python3.12/ -I/home/wdueease/code/LiMu-3D-LiDAR/driver/include -L/home/wdueease/code/LiMu-3D-LiDAR/driver/lib/x86_64 -llimu_driver

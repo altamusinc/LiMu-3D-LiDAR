@@ -1,0 +1,12 @@
+.ros/
+.rviz/
+.cache/
+.config/
+.vscode-server/
+__pycache__
+.bash_history
+.python_history
+build/
+driver/python/python_example.egg-info/
+driver/python/dist
+driver/python/src/web/node_modules/
