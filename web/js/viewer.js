@@ -248,7 +248,7 @@ function update_scene(tjs){
         update_scene(tjs);
     }
     
-    $.ajax({url: 'http://helios.local/asbytes', method: "GET", xhrFields: {responseType: "arraybuffer"}, success, error});
+    $.ajax({url: 'http://asbytes', method: "GET", xhrFields: {responseType: "arraybuffer"}, success, error});
 }
 
 function helios_settings(tjs){
@@ -257,7 +257,7 @@ function helios_settings(tjs){
 	if($('#'+id).length){$('#'+id).dialog('destroy').remove();}
 	$('<div style="padding:20px;"></div>').attr('id', id).appendTo( 'body' );
 
-    $.ajax({url: 'http://helios.local/currentSettings', method: "GET", dataType:'json', success: function(data){
+    $.ajax({url: 'http://currentSettings', method: "GET", dataType:'json', success: function(data){
         helios_settings_content(data,tjs);
     }});
 
@@ -476,7 +476,7 @@ function helios_settings(tjs){
             let json = {}; json[name] = val; json = JSON.stringify(json);
             clearTimeout(post_timeout);
             post_timeout = setTimeout(function(){
-                $.ajax({ type: 'POST', url: 'http://helios.local/applySettings', data: json, contentType: "application/json; charset=utf-8", success: function(data){
+                $.ajax({ type: 'POST', url: 'http://applySettings', data: json, contentType: "application/json; charset=utf-8", success: function(data){
                     helios_settings_content(data,tjs);
                 }});
             },250);		
@@ -487,7 +487,7 @@ function helios_settings(tjs){
             let json = {}; json[name] = val; json = JSON.stringify(json);
             clearTimeout(post_timeout);
             post_timeout = setTimeout(function(){
-                $.ajax({ type: 'POST', url: 'http://helios.local/displaySettings', data: json, contentType: "application/json; charset=utf-8", success: function(data){
+                $.ajax({ type: 'POST', url: 'http://displaySettings', data: json, contentType: "application/json; charset=utf-8", success: function(data){
                     helios_settings_content(data,tjs);
                 }});
             },250);

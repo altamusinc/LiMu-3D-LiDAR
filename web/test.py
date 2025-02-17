@@ -39,7 +39,7 @@ class Lidar:
         self._lens_type = 0  
         self._frequency_modulation = 2
         self._channel = 0
-        self._image_type = 1
+        self._image_type = 2
         self._hdr_mode = 2
         self._integration_time_tof_1 = 50
         self._integration_time_tof_2 = 400
@@ -349,9 +349,13 @@ class myPointCloud:
                 # print(t_end - t_start)
             case 2:
                 # Amplitude
-                t_start = time.perf_counter()
                 amplitude = np.array(limu_frame.get_amplitude_data(), dtype=np.float32)
-                foo = ""
+                norm_min = np.nanmin(amplitude)
+                norm_max = np.nanmax(amplitude)
+                normalizer = plt.Normalize(norm_min, norm_max)
+                normalized = normalizer(amplitude)
+                cmap = plt.get_cmap("plasma")
+                colors = cmap(normalized)[:,0:3]
             case 3 | 4 | 5:
                 # Color by x y or z
                 i = None
