@@ -111,31 +111,6 @@ void updateFrame(std::shared_ptr<Frame> frame)
 
     n_frames ++;
 
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
-    pcl::PointXYZRGB* data_ptr = reinterpret_cast<pcl::PointXYZRGB*>(frame->data_3d_xyz_rgb);
-    std::vector<pcl::PointXYZRGB> pts(data_ptr, data_ptr + frame->n_points);
-    // cloud->points.insert(cloud->points.end(), pts.begin(), pts.end());
-
-    // Amplitude Map
-    auto vecsize = frame->n_points * 4;
-    auto amp_ptr = frame->data_amplitude;
-    auto amp_float = std::vector<float>(amp_ptr, amp_ptr + vecsize);
-    // cv::Mat amplitude_mat = cv::Mat(frame->height, frame->width, CV_32F, frame->data_amplitude);
-
-    // Depth Map BGR
-    cv::Mat depth_bgr = cv::Mat(frame->height, frame->width, CV_8UC3, frame->data_2d_bgr);
-
-    // Depth Raw Map
-    cv::Mat depth_mat = cv::Mat(frame->height, frame->width, CV_32F, frame->data_depth);
-
-    // Saturated Mask
-    cv::Mat saturated_mask = cv::Mat(frame->height, frame->width, CV_8UC1, frame->saturated_mask);
-
-    // cv::imshow("Amplitude", amplitude_mat);
-	cv::imshow("depth_bgr", depth_bgr);
-    cv::imshow("depth_raw", depth_mat);
-    cv::imshow("Saturated Mask", saturated_mask);
-
 	if (cv::waitKey(1) == 27)
 	{
 		exit_requested = true;
