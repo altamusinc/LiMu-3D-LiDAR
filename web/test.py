@@ -422,7 +422,10 @@ class myPointCloud:
             print(f"added frame at address {limu_frame}")
 
         global rgb_cam
-        global raw_frame_list
+        global raw_amplitudes
+        global raw_distances
+        global raw_cams
+        global raw_xyz
         distances = np.array(limu_frame.get_depth(), dtype=np.float32)
         xyz = np.array(limu_frame.get_xyz_rgb(), dtype=np.float32).reshape(limu_frame.n_points, 8)
         xyz = xyz[:,:3]
@@ -433,9 +436,11 @@ class myPointCloud:
             cam_frame, (320, 240), interpolation=cv2.INTER_AREA)
         cam_frame = cv2.flip(cam_frame, 1)
         cam_frame = cam_frame.reshape(76800, 3) / 255
-        f = LimuRawData(distances, amplitude, xyz, cam_frame)
-        if len(raw_frame_list) < 50:
-            raw_frame_list.append(f)
+        if len(raw_amplitudes) < 50:
+            raw_amplitudes.append(amplitude)
+            raw_distances.append(distances)
+            raw_xyz.append(xyz)
+            raw_cams.append(cam_frame)
         else:
             print("list full")
 
@@ -558,10 +563,13 @@ my_point_cloud = myPointCloud()
 lidar = Lidar()
 rgb_cam = cv2.VideoCapture(0)
 
-raw_frame_list = []
+raw_distances = []
+raw_xyz = []
+raw_amplitudes = []
+raw_cams = []
 
 # Glue the point cloud handler to the lidar frame callback
-lidar.setFrameCallback(my_point_cloud.handleFrame)
+lidar.setFrameCallback(my_point_cloud.handleFrameRaw)
 # lidar.streamDistance()
 
 # Make sure we can open the camera
