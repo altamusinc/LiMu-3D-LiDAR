@@ -39,7 +39,6 @@ def create_rgbd_and_pcd(distance, color):
 def filter_by_amplitude(data: LimuRawData, min_amplitude: float):
     bad_points = (data.amplitude < min_amplitude).nonzero()[0].tolist()
     data.pcd_from_xyz = data.pcd_from_xyz.select_by_index(bad_points, invert=True)
-    print("hello")
 
 def filter_outliers(pcd: o3d.geometry.PointCloud, neighbors: int = 20, std_dev: float = 2):
     cl, index = pcd.remove_statistical_outlier(nb_neighbors=neighbors, std_ratio=std_dev)
@@ -82,18 +81,25 @@ random_p1 = []
 random_p2 = []
 averaged_distance = []
 averaged_amplitude = []
+averaged_xyz = []
 for frame in frames:
     random_p1.append(frame.distances[5000])
     random_p2.append(frame.distances[12000])
     averaged_distance.append(frame.distances)
     averaged_amplitude.append(frame.amplitude)
+    averaged_xyz.append(frame.xyz)
     filter_by_amplitude(frame, 25)
 
 averaged_amplitude = np.nanmean(np.array(averaged_amplitude), axis=0)
 averaged_distance = np.nanmean(np.array(averaged_distance), axis=0)
+averaged_xyz = np.nanmean(np.array(averaged_xyz), axis=0)
+avg_pcd = o3d.geometry.PointCloud()
+avg_pcd.points = o3d.utility.Vector3dVector(averaged_xyz)
 
-rgbd, pcd = create_rgbd_and_pcd(averaged_distance, averaged_amplitude)
-o3d.visualization.draw_geometries([pcd], "averaged")
+
+rgbd, avg_rgbd_pcd = create_rgbd_and_pcd(averaged_distance, averaged_amplitude)
+o3d.visualization.draw_geometries([avg_rgbd_pcd], "averaged from RGBD")
+o3d.visualization.draw_geometries([avg_pcd], "averaged from xyz")
 
 
 plot_list(random_p1)
