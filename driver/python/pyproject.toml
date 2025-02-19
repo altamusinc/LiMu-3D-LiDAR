@@ -9,7 +9,7 @@ dependencies = ["pybind11"]
 
 [tool.setuptools]
 ext-modules = [
-    {name = "limu_py", sources = ["src/wrapper.cpp"], include-dirs = ["../include"], library-dirs = ["../lib/x86_64/"], libraries = ["limu_driver"], extra-compile-args = ["-std=c++17"]}
+    {name = "limu_py", sources = ["src/wrapper.cpp"], include-dirs = ["../include", "../../.venv/lib/python3.12/site-packages/pybind11/include"], library-dirs = ["../lib/x86_64/"], libraries = ["limu_driver"], extra-compile-args = ["-std=c++17"]}
 ]
 
 [tool.setuptools.package-data]
