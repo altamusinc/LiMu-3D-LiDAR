@@ -8,6 +8,8 @@ import json
 from flask import Flask, request, send_file, send_from_directory, render_template, Response
 from flask_cors import CORS
 from collections import deque
+import threading
+import pickle
 import matplotlib.pyplot as plt
 import threading
 
@@ -381,6 +383,13 @@ class Lidar:
     def setFrameCallback(self, callback):
         self.tof.subscribeFrame(callback)
 
+class LimuRawData:
+    def __init__(self, distances, amplitude, xyz, rgb):
+        self.distances = distances
+        self.amplitude = amplitude
+        self.rgb = rgb
+        self.xyz = xyz
+
 class myPointCloud:
     cam_x_scale = .9
     cam_y_scale = .9
@@ -406,6 +415,29 @@ class myPointCloud:
                 "cam_x_trans": float(self.cam_x_trans),
                 "cam_y_trans": float(self.cam_y_trans),
                 }
+
+    def handleFrameRaw(self, limu_frame):
+        if id(limu_frame) not in self.frame_addresses:
+            self.frame_addresses[id(limu_frame)] = limu_frame
+            print(f"added frame at address {limu_frame}")
+
+        global rgb_cam
+        global raw_frame_list
+        distances = np.array(limu_frame.get_depth(), dtype=np.float32)
+        xyz = np.array(limu_frame.get_xyz_rgb(), dtype=np.float32).reshape(limu_frame.n_points, 8)
+        xyz = xyz[:,:3]
+        amplitude = np.array(limu_frame.get_amplitude_data(), dtype=np.float32)
+        ret, cam_frame = rgb_cam.read()
+        cam_frame = cv2.cvtColor(cam_frame, cv2.COLOR_BGR2RGB)
+        cam_frame = cv2.resize(
+            cam_frame, (320, 240), interpolation=cv2.INTER_AREA)
+        cam_frame = cv2.flip(cam_frame, 1)
+        cam_frame = cam_frame.reshape(76800, 3) / 255
+        f = LimuRawData(distances, amplitude, xyz, cam_frame)
+        if len(raw_frame_list) < 50:
+            raw_frame_list.append(f)
+        else:
+            print("list full")
 
     def handleFrame(self, limu_frame):
         print(f'Frame Received FPS: {1 / (time.perf_counter() - self.last_frame_time):.2f}')
@@ -517,9 +549,16 @@ class myPointCloud:
                     map_y[i,j] = 0
         self._cam_remap_map = (map_x, map_y)
 
+with open("raw_list.pickle", "rb") as file:
+    var = pickle.load(file)
+
+print("hello")
+
 my_point_cloud = myPointCloud()
 lidar = Lidar()
 rgb_cam = cv2.VideoCapture(0)
+
+raw_frame_list = []
 
 # Glue the point cloud handler to the lidar frame callback
 lidar.setFrameCallback(my_point_cloud.handleFrame)
@@ -615,6 +654,7 @@ def handle_input():
 
 input_thread = threading.Thread(target=handle_input)
 input_thread.start()
+
 
 if __name__ == '__main__':
     webAPI.run(debug=True)

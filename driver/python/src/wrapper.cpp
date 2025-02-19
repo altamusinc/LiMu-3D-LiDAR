@@ -39,7 +39,7 @@ PYBIND11_MODULE(limu_py, m) {
         .def_readwrite("width", &Frame::width)
         .def_readwrite("height", &Frame::height)
         .def_readwrite("payloadHeaderOffset", &Frame::payloadHeaderOffset)
-        .def_readwrite("px_size;", &Frame::px_size)
+        .def_readwrite("px_size", &Frame::px_size)
         .def_readwrite("frame_id", &Frame::frame_id)
         .def_readwrite("distData", &Frame::distData)
         .def_readwrite("amplData", &Frame::amplData)
