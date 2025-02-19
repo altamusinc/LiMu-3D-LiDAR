@@ -9,6 +9,7 @@ from flask import Flask, request, send_file, send_from_directory, render_templat
 from flask_cors import CORS
 from collections import deque
 import matplotlib.pyplot as plt
+import threading
 
 class BoundedQueue:
     def __init__(self, max_size):
@@ -37,21 +38,30 @@ class Lidar:
         print("connecting to LIMU")
         self.tof = limu_py.ToF.tof320("10.10.31.180", "50660")
         self._lens_type = 0  
-        self._frequency_modulation = 2
+        self._frequency_modulation = 0
         self._channel = 0
         self._image_type = 2
         self._hdr_mode = 2
         self._integration_time_tof_1 = 50
         self._integration_time_tof_2 = 400
-        self._integration_time_tof_3 = 4000
+        self._integration_time_tof_3 = 8000
         self._integration_time_tof_Gr = 10000
-        self._min_amplitude = 60
+        self._min_amplitude = 0
         self._lens_center_offset_x = 0
         self._lens_center_offset_y = 0
         self._roi_left_x = 0
         self._roi_right_x = 319
         self._roi_top_y = 0
         self._roi_bottom_y = 239
+        self._filter_median_filter: bool = True
+        self._filter_average_filter: bool = True
+        self._filter_temporal_factor: int = 0
+        self._filter_temporal_threshold: int = 0
+        self._filter_edge_threshold: int = 0
+        self._filter_temporal_edge_threshold_low: int = 0
+        self._filter_temporal_edge_threshold_high: int = 0
+        self._filter_interference_detection_limit: int = 0
+        self._filter_interference_detection_use_last_value: bool = False
         self.apply_all_settings()
 
     @property
@@ -210,6 +220,88 @@ class Lidar:
                 print("Streaming Distance/Amplitude")
                 self.tof.streamDistanceAmplitude()
 
+    @property
+    def filter_median_filter(self):
+        return self._filter_median_filter
+    
+    @filter_median_filter.setter
+    def filter_median_filter(self, val: bool):
+        self._filter_median_filter = val
+        self.apply_filter_settings()
+        
+    @property
+    def filter_average_filter(self):
+        return self._filter_average_filter
+
+    @filter_average_filter.setter
+    def filter_average_filter(self, val: bool):
+        self._filter_average_filter = val
+        self.apply_filter_settings()
+        
+    @property
+    def filter_temporal_factor(self):
+        return self._filter_temporal_factor
+
+    @filter_temporal_factor.setter
+    def filter_temporal_factor(self, val: int):
+        self._filter_temporal_factor = val
+        self.apply_filter_settings()
+        
+    @property
+    def filter_temporal_threshold(self):
+        return self._filter_temporal_threshold
+
+    @filter_temporal_threshold.setter
+    def filter_temporal_threshold(self, val: int):
+        self._filter_temporal_threshold = val
+        self.apply_filter_settings()
+        
+    @property
+    def filter_edge_threshold(self):
+        return self._filter_edge_threshold
+
+    @filter_edge_threshold.setter
+    def filter_edge_threshold(self, val: int):
+        self._filter_edge_threshold = val
+        self.apply_filter_settings()
+        
+    @property
+    def filter_temporal_edge_threshold_low(self):
+        return self._filter_temporal_edge_threshold_low
+
+    @filter_temporal_edge_threshold_low.setter
+    def filter_temporal_edge_threshold_low(self, val: int):
+        self._filter_temporal_edge_threshold_low = val
+        self.apply_filter_settings()
+        
+    @property
+    def filter_temporal_edge_threshold_high(self):
+        return self._filter_temporal_edge_threshold_high
+
+    @filter_temporal_edge_threshold_high.setter
+    def filter_temporal_edge_threshold_high(self, val: int):
+        self._filter_temporal_edge_threshold_high = val
+        self.apply_filter_settings()
+
+    @property
+    def filter_interference_detection_limit(self):
+        return self._filter_interference_detection_limit
+
+    @filter_interference_detection_limit.setter
+    def filter_interference_detection_limit(self, val: int):
+        self._filter_interference_detection_limit = val
+        self.apply_filter_settings()
+        
+    @property
+    def filter_interference_detection_use_last_value(self):
+        return self._filter_interference_detection_use_last_value
+
+    @filter_interference_detection_use_last_value.setter
+    def filter_interference_detection_use_last_value(self, val: bool):
+        self._filter_interference_detection_use_last_value = val
+        self.apply_filter_settings()
+        
+
     def apply_roi_settings(self):
         self.tof.setRoi(self.roi_left_x, self.roi_top_y, self.roi_right_x, self.roi_bottom_y)
 
@@ -225,6 +317,18 @@ class Lidar:
         print(f"Applying Lens offset X: {self.lens_center_offset_x} Y: {self.lens_center_offset_y}")
         self.tof.setLensCenter(self.lens_center_offset_x, self.lens_center_offset_y)
 
+    def apply_filter_settings(self):
+        print("Applying filter settings")
+        self.tof.setFilter(self.filter_median_filter, 
+                           self.filter_average_filter, 
+                           self.filter_temporal_factor, 
+                           self.filter_temporal_threshold, 
+                           self.filter_edge_threshold, 
+                           self.filter_temporal_edge_threshold_low, 
+                           self.filter_temporal_edge_threshold_high, 
+                           self.filter_interference_detection_limit, 
+                           self.filter_interference_detection_use_last_value)
+
     def apply_all_settings(self):
         self.apply_modulation_and_channel_settings()
         self.min_amplitude = self.min_amplitude
@@ -233,7 +337,7 @@ class Lidar:
         self.apply_roi_settings()
         self.lens_type = self.lens_type
         self.apply_lens_offset_settings()
-        self.tof.setFilter(0, 0, 0, 0, 0, 0, 0, 0, 0)
+        self.apply_filter_settings
         self.image_type = self.image_type
 
     def update_settings_from_json(self, settings_json):
@@ -278,8 +382,8 @@ class Lidar:
         self.tof.subscribeFrame(callback)
 
 class myPointCloud:
-    cam_x_scale = 1
-    cam_y_scale = 1
+    cam_x_scale = .9
+    cam_y_scale = .9
     cam_x_trans = 0
     cam_y_trans = 0
     _cam_remap_map = ()
@@ -302,7 +406,6 @@ class myPointCloud:
                 "cam_x_trans": float(self.cam_x_trans),
                 "cam_y_trans": float(self.cam_y_trans),
                 }
-
 
     def handleFrame(self, limu_frame):
         print(f'Frame Received FPS: {1 / (time.perf_counter() - self.last_frame_time):.2f}')
@@ -351,7 +454,7 @@ class myPointCloud:
                 # Amplitude
                 amplitude = np.array(limu_frame.get_amplitude_data(), dtype=np.float32)
                 norm_min = np.nanmin(amplitude)
-                norm_max = np.nanmax(amplitude)
+                norm_max = np.nanmax(amplitude)/5
                 normalizer = plt.Normalize(norm_min, norm_max)
                 normalized = normalizer(amplitude)
                 cmap = plt.get_cmap("plasma")
@@ -504,6 +607,14 @@ def sendCurrentSettings():
 def defaultColor():
     my_point_cloud.color_from_cam = False
     return "1"
+
+def handle_input():
+    while True:
+        command = input("Enter Input: ")
+        print(f"Entered {command}")
+
+input_thread = threading.Thread(target=handle_input)
+input_thread.start()
 
 if __name__ == '__main__':
     webAPI.run(debug=True)

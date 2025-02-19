@@ -1,3 +1,4 @@
 {
-    "cmake.sourceDirectory": "/home/wdueease/code/LiMu-3D-LiDAR/samples/opencv"
+    "cmake.sourceDirectory": "/home/helios/code/LiMu-3D-LiDAR/samples/opencv/",
+    "cmake.ignoreCMakeListsMissing": true
 }

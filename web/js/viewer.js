@@ -6,7 +6,7 @@ initialize_canvas();
 
 let m_pressed = false;
 let pause = false;
-let frame_time = 111;
+let frame_time = 500;
 
 function buttons(tjs){
 
@@ -396,15 +396,15 @@ function helios_settings(tjs){
         );
     
         let sliders = {
-            'integration_time_tof_1':{'table':'limu_settings','name':'Integration Time ToF 1','units':'us','range':[0,4000],'step':100},
-            'integration_time_tof_2':{'table':'limu_settings','name':'Integration Time ToF 2','units':'us','range':[0,4000],'step':100},
-            'integration_time_tof_3':{'table':'limu_settings','name':'Integration Time ToF 3','units':'us','range':[0,4000],'step':100},
+            'integration_time_tof_1':{'table':'limu_settings','name':'Integration Time ToF 1','units':'us','range':[0,8000],'step':100},
+            'integration_time_tof_2':{'table':'limu_settings','name':'Integration Time ToF 2','units':'us','range':[0,8000],'step':100},
+            'integration_time_tof_3':{'table':'limu_settings','name':'Integration Time ToF 3','units':'us','range':[0,8000],'step':100},
             'min_amplitude':{'table':'limu_settings','name':'Min Amplitude','units':null,'range':[0,100000],'step':100},
             'roi_left_x':{'table':'limu_settings','name':'Region of Interest Left X','units':'pts','range':[0,319],'step':10},
             'roi_right_x':{'table':'limu_settings','name':'Region of Interest Right X','units':'pts','range':[0,319],'step':10},
             'roi_top_y':{'table':'limu_settings','name':'Region of Interest Top Y','units':'pts','range':[0,239],'step':10},
             'roi_bottom_y':{'table':'limu_settings','name':'Region of Interest Bottom Y','units':'pts','range':[0,239],'step':10},
-            'point_size':{'table':'display_settings','name':'Display Point Size','units':null,'range':[0,0.05],'step':0.0001},
+            'point_size':{'table':'display_settings','name':'Display Point Size','units':null,'range':[0,0.25],'step':0.0001},
         };
         $.each(sliders, function(slider, config){
             let units = '';
