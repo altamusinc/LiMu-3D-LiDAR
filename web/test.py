@@ -44,11 +44,11 @@ class Lidar:
         self._channel = 0
         self._image_type = 2
         self._hdr_mode = 2
-        self._integration_time_tof_1 = 50
-        self._integration_time_tof_2 = 400
+        self._integration_time_tof_1 = 300
+        self._integration_time_tof_2 = 1500
         self._integration_time_tof_3 = 8000
         self._integration_time_tof_Gr = 10000
-        self._min_amplitude = 0
+        self._min_amplitude = 50
         self._lens_center_offset_x = 0
         self._lens_center_offset_y = 0
         self._roi_left_x = 0
@@ -425,6 +425,8 @@ class myPointCloud:
         global raw_amplitudes
         global raw_distances
         global raw_cams
+        global capture_bool
+        global done_bool
         global raw_xyz
         distances = np.array(limu_frame.get_depth(), dtype=np.float32)
         xyz = np.array(limu_frame.get_xyz_rgb(), dtype=np.float32).reshape(limu_frame.n_points, 8)
@@ -436,13 +438,20 @@ class myPointCloud:
             cam_frame, (320, 240), interpolation=cv2.INTER_AREA)
         cam_frame = cv2.flip(cam_frame, 1)
         cam_frame = cam_frame.reshape(76800, 3) / 255
-        if len(raw_amplitudes) < 50:
-            raw_amplitudes.append(amplitude)
-            raw_distances.append(distances)
-            raw_xyz.append(xyz)
-            raw_cams.append(cam_frame)
+        if capture_bool:
+            if len(raw_amplitudes) < 50:
+                print("capture")
+                raw_amplitudes.append(amplitude)
+                raw_distances.append(distances)
+                raw_xyz.append(xyz)
+                raw_cams.append(cam_frame)
+            else:
+                done_bool = True
+                pickle_frames()
         else:
             print("list full")
+
+        
 
     def handleFrame(self, limu_frame):
         print(f'Frame Received FPS: {1 / (time.perf_counter() - self.last_frame_time):.2f}')
@@ -554,14 +563,14 @@ class myPointCloud:
                     map_y[i,j] = 0
         self._cam_remap_map = (map_x, map_y)
 
-with open("raw_list.pickle", "rb") as file:
-    var = pickle.load(file)
-
 print("hello")
 
 my_point_cloud = myPointCloud()
 lidar = Lidar()
 rgb_cam = cv2.VideoCapture(0)
+
+capture_bool = False
+done_bool = False
 
 raw_distances = []
 raw_xyz = []
@@ -575,6 +584,14 @@ lidar.setFrameCallback(my_point_cloud.handleFrameRaw)
 # Make sure we can open the camera
 if not rgb_cam.isOpened():
     print("Error: Could not open camera.")
+    exit()
+
+def pickle_frames():
+    with open("frames.pickle", "wb") as file:
+        pickle.dump(raw_distances, file)
+        pickle.dump(raw_amplitudes, file)
+        pickle.dump(raw_xyz, file)
+        pickle.dump(raw_cams, file)
     exit()
 
 webAPI = Flask(__name__, template_folder="./")
@@ -656,9 +673,18 @@ def defaultColor():
     return "1"
 
 def handle_input():
+    global capture_bool
     while True:
         command = input("Enter Input: ")
         print(f"Entered {command}")
+        match command:
+            case "start":
+                print("starting capture")
+                capture_bool = True
+            case "stop":
+                print("stopping capture")
+                capture_bool = False
+
 
 input_thread = threading.Thread(target=handle_input)
 input_thread.start()
