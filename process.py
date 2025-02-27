@@ -2,6 +2,7 @@ import pickle
 import open3d as o3d
 import numpy as np
 import matplotlib.pyplot as plt
+import copy
 
 class LimuRawData:
     def __init__(self, distances, amplitude, xyz, rgb):
@@ -92,10 +93,37 @@ for frame in frames:
 
 averaged_amplitude = np.nanmean(np.array(averaged_amplitude), axis=0)
 averaged_distance = np.nanmean(np.array(averaged_distance), axis=0)
+
+# Created Averaged PCD in native units (meters)
 averaged_xyz = np.nanmean(np.array(averaged_xyz), axis=0)
 avg_pcd = o3d.geometry.PointCloud()
 avg_pcd.points = o3d.utility.Vector3dVector(averaged_xyz)
 
+# Grab a single frame from the averages for comparison
+single_pcd = frames[25].pcd_from_xyz
+
+# Read point cloud from Disk
+hyperion_pcd_feet = o3d.io.read_point_cloud("hyperion_eos_feet.pcd")
+
+# Convert between feet/meters for each permutation
+hyperion_pcd_meters = copy.deepcopy(hyperion_pcd_feet)
+hyperion_pcd_meters.scale(0.3048, hyperion_pcd_meters.get_center())
+
+averaged_xyz_feet = copy.deepcopy(avg_pcd)
+averaged_xyz_feet.scale(3.28084, averaged_xyz_feet.get_center())
+
+single_pcd_feet = copy.deepcopy(single_pcd)
+single_pcd_feet.scale(3.28084, single_pcd_feet.get_center())
+
+# Save them to files
+o3d.io.write_point_cloud("pcds/hyperion_ft.pcd", hyperion_pcd_feet)
+o3d.io.write_point_cloud("pcds/hyperion_m.pcd", hyperion_pcd_meters)
+o3d.io.write_point_cloud("pcds/limu_averaged_ft.pcd", averaged_xyz_feet)
+o3d.io.write_point_cloud("pcds/limu_averaged_m.pcd", avg_pcd)
+o3d.io.write_point_cloud("pcds/limu_single_ft.pcd", single_pcd_feet)
+o3d.io.write_point_cloud("pcds/limu_single_m.pcd", single_pcd)
+
+exit()
 
 rgbd, avg_rgbd_pcd = create_rgbd_and_pcd(averaged_distance, averaged_amplitude)
 o3d.visualization.draw_geometries([avg_rgbd_pcd], "averaged from RGBD")
